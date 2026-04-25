@@ -85,3 +85,4 @@
 - Jika user mengoreksi bahwa hanya sebagian halaman yang terlalu jauh dari dock, jangan ubah semua tab sekaligus lagi. Pertahankan halaman yang sudah pas, lalu pisahkan clearance antara halaman dock-only dan halaman yang punya FAB/filter overlay.
 - Jika user masih meminta jarak halaman FAB diperkecil setelah tuning pertama, lakukan penyesuaian kecil bertahap pada helper shared, bukan perubahan besar lagi. Untuk layout bawah, lebih aman turun sedikit-sedikit daripada mengulang reset semua halaman.
 - Jika user akhirnya meminta “samakan dengan dashboard”, jangan pertahankan clearance khusus hanya karena ada FAB filter. Samakan baseline content padding-nya dulu dengan halaman referensi, lalu biarkan FAB mengambang di atasnya.
+- Jika user bilang popup/filter “masih berantakan”, jangan tambah aksen baru. Kurangi elemen yang redundant dulu: badge ganda, hint text, tile ikon besar, dan divider berlapis biasanya justru membuat popup kecil terasa sesak.

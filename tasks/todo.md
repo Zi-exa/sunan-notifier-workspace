@@ -1277,3 +1277,16 @@ Tanggal: 2026-04-20
 - Popup filter kini memakai header yang lebih premium dengan badge filter aktif, bukan hanya teks ringkas biasa.
 - Setiap opsi filter sekarang punya ikon kategori yang relevan di `Tugas` dan `Absensi`, jadi daftar filter lebih cepat dipindai.
 - Visual list opsi dirapikan dengan icon tile kecil, hint text ringan, dan divider antar-opsi yang lebih halus agar card popup terasa lebih polished.
+
+## Plan (Compact Filter Popup Cleanup - 2026-04-25)
+
+- [x] 1. Audit elemen popup filter yang redundant dari screenshot terbaru
+- [x] 2. Sederhanakan popup filter dengan header lebih ringkas, row lebih pendek, dan dekorasi lebih sedikit
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Compact Filter Popup Cleanup - 2026-04-25)
+
+- Koreksi user valid: versi premium sebelumnya terlalu ramai dan tinggi, terutama karena badge aktif, hint text, tile ikon, dan divider tambahan bertumpuk dalam ruang sempit.
+- Popup sekarang dipadatkan: header tinggal judul + status aktif, row opsi dibuat satu baris yang lebih pendek, dan elemen dekoratif sekunder dihapus.
+- Ikon kategori tetap dipertahankan, tetapi tampil lebih ringan tanpa tile besar, sehingga popup terasa jauh lebih rapi dan cepat dipindai.
