@@ -1240,3 +1240,15 @@ Tanggal: 2026-04-20
 - Koreksi user valid: setelah helper shared dipasang, `Dashboard` dan `Kalender` sudah pas, tetapi clearance untuk halaman dengan tombol filter floating (`Tugas` dan `Absensi`) masih terlalu longgar, dan `Settings` juga sedikit terlalu jauh.
 - `Dashboard` dan `Kalender` dibiarkan tetap memakai clearance dock standar. `Tugas` dan `Absensi` kini memakai clearance konten yang lebih rapat khusus untuk FAB filter, sementara `Settings` dikembalikan ke clearance dock standar tanpa tambahan ekstra.
 - Dengan pendekatan ini, spacing bawah tetap konsisten per kategori halaman, tetapi tidak dipaksa seragam secara buta ketika pola layout-nya memang berbeda.
+
+## Plan (Further Filter Tab Spacing Reduction - 2026-04-25)
+
+- [x] 1. Turunkan lagi offset FAB filter dan content clearance halaman filter tanpa mengubah halaman dock-only yang sudah pas
+- [x] 2. Verifikasi dengan `typecheck` dan `lint`
+- [x] 3. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Further Filter Tab Spacing Reduction - 2026-04-25)
+
+- Offset tombol filter floating diturunkan lagi, jadi FAB di `Tugas` dan `Absensi` duduk lebih dekat ke dock footer.
+- Clearance konten untuk halaman dengan FAB filter juga diperkecil lagi agar kartu terakhir tidak meninggalkan jarak kosong yang terlalu besar sebelum dock bawah.
+- `Dashboard`, `Kalender`, dan `Settings` tidak diubah lagi pada iterasi ini karena user sudah mengonfirmasi halaman-halaman itu sudah pas.
