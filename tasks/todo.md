@@ -1355,3 +1355,16 @@ Tanggal: 2026-04-20
 - Screenshot terbaru menunjukkan header detail sudah benar, tetapi body screen masih bisa tampak putih sepersekian detik. Itu mengarah ke surface `Detail Tugas` sendiri, bukan lagi hanya theme navigation atau background native Android.
 - `Detail Tugas` sekarang tidak lagi me-return `ScrollView` langsung. Screen dibungkus root `View` berwarna theme gelap, dan `contentContainerStyle` scroll view juga ikut diberi background gelap + `flexGrow` supaya area kosong tidak fallback ke putih.
 - Route `task/[id]` juga sekarang memakai animasi `fade`, bukan slide horizontal default, sehingga transisi tidak lagi menonjolkan blank surface saat push/pop sangat cepat.
+
+## Plan (Remove Native Stack Flash On Task Detail Transition - 2026-04-25)
+
+- [x] 1. Audit ulang screenshot/gejala dan konfirmasi bahwa flash putih berasal dari animasi native stack saat push/pop, bukan lagi dari surface konten
+- [x] 2. Ubah route `Detail Tugas` ke transisi yang tidak memunculkan flash di Android
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [ ] 4. Commit perubahan di repo `mobile`, lalu sinkronkan repo root dan catat lesson baru
+
+## Review (Remove Native Stack Flash On Task Detail Transition - 2026-04-25)
+
+- Koreksi user valid: ketika flash masih muncul saat masuk dan keluar `Detail Tugas`, sementara screenshot menunjukkan sisa konten lama di tepi layar, masalahnya sudah jelas ada di animasi native stack.
+- Route `task/[id]` sekarang memakai `animation: 'none'`, jadi Android tidak lagi menjalankan transisi push/pop yang sempat menampilkan surface putih/stripe lama saat gerakan sangat cepat.
+- Ini memang tradeoff yang disengaja: transisi jadi instan, tetapi lebih bersih dan tidak memunculkan artefak visual yang merusak mode gelap.
