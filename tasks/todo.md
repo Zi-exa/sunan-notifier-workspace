@@ -1174,3 +1174,16 @@ Tanggal: 2026-04-20
 - Komponen reusable baru `FloatingFilterMenu` menangani tombol ikon, indikator filter aktif, backdrop tap-to-close, dan popup pilihan filter yang mengikuti tema terang/gelap.
 - Popup filter ditambatkan ke tombol floating yang sama, jadi interaksinya tetap cepat tetapi tidak lagi mengganggu swipe antar-tab maupun scroll vertikal screen.
 - Screen `Tugas` dan `Absensi` kini memakai komponen yang sama dan hanya mengirim daftar opsi masing-masing, sehingga pola filternya konsisten dan mudah dipelihara.
+
+## Plan (Floating Filter Animation Polish - 2026-04-25)
+
+- [x] 1. Audit transisi buka-tutup popup filter saat ini dan tentukan animasi yang paling ringan
+- [x] 2. Tambahkan animasi fade + slide untuk popup dan backdrop tanpa mengubah perilaku filter
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Floating Filter Animation Polish - 2026-04-25)
+
+- Popup filter sekarang tidak lagi muncul secara mendadak. Komponen `FloatingFilterMenu` memakai animasi fade, slide-up, dan scale ringan saat buka-tutup, sehingga transisinya terasa lebih halus namun tetap cepat.
+- Backdrop ikut difade in/out agar perpindahan fokus ke menu terasa lebih natural, dan tombol floating juga sedikit membesar saat popup aktif untuk memberi feedback visual yang lebih rapi.
+- Perubahan ini tetap lokal di komponen reusable, jadi `Tugas` dan `Absensi` otomatis mendapat animasi yang sama tanpa perubahan perilaku filter di masing-masing screen.
