@@ -1368,3 +1368,16 @@ Tanggal: 2026-04-20
 - Koreksi user valid: ketika flash masih muncul saat masuk dan keluar `Detail Tugas`, sementara screenshot menunjukkan sisa konten lama di tepi layar, masalahnya sudah jelas ada di animasi native stack.
 - Route `task/[id]` sekarang memakai `animation: 'none'`, jadi Android tidak lagi menjalankan transisi push/pop yang sempat menampilkan surface putih/stripe lama saat gerakan sangat cepat.
 - Ini memang tradeoff yang disengaja: transisi jadi instan, tetapi lebih bersih dan tidak memunculkan artefak visual yang merusak mode gelap.
+
+## Plan (Use Stable Back Route From Task Detail - 2026-04-25)
+
+- [x] 1. Tandai navigasi dari tab `Tugas` ke `Detail Tugas` dengan parameter asal route
+- [x] 2. Override tombol back header dan tombol back Android di `Detail Tugas` agar kembali ke tab `Tugas` via route stabil, bukan pop bawaan
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [ ] 4. Commit perubahan di repo `mobile`, lalu sinkronkan repo root dan catat lesson baru
+
+## Review (Use Stable Back Route From Task Detail - 2026-04-25)
+
+- Jalur dari tab `Tugas` ke `Detail Tugas` sekarang membawa parameter asal (`from=tasks`), jadi screen detail tahu kapan harus kembali ke tab itu lewat route stabil.
+- `Detail Tugas` sekarang tidak lagi mengandalkan pop default untuk kasus tersebut. Tombol back header dan tombol back Android di-override ke `router.dismissTo('/(tabs)/tasks')`, sehingga keluar dari detail tidak lagi memakai pop bawaan yang sempat memunculkan flash.
+- Untuk jalur lain yang bukan dari tab `Tugas`, fallback tetap aman: jika stack bisa kembali, pakai `router.back()`, dan kalau tidak bisa, route diganti ke `/(tabs)/tasks`.
