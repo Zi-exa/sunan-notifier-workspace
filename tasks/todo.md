@@ -1395,3 +1395,16 @@ Tanggal: 2026-04-20
 - Koreksi user valid: karena `Detail Tugas` sebelumnya aman dan bug baru muncul tepat setelah tombol `Detail Tugas` ditambahkan, akar masalah lebih masuk akal ada di implementasi CTA baru, bukan di route detail lama.
 - `Detail Tugas` dan route stack saya kembalikan ke baseline aman yang dipakai sebelum rangkaian workaround bug ini. Jadi screen detail kembali ke perilaku sederhana yang sebelumnya sudah terbukti stabil.
 - Tombol `Detail Tugas` tetap ada di kartu tugas, tetapi sekarang hanya menjadi CTA visual di dalam kartu `Pressable` yang sama. Tidak ada lagi nested `Pressable`, route param tambahan, custom back handler, atau override transition yang membuka regresi baru.
+
+## Plan (Lightweight Task Detail Link - 2026-04-26)
+
+- [x] 1. Pertahankan jalur navigasi `Detail Tugas` yang sekarang sudah kembali ke baseline aman
+- [x] 2. Ubah CTA `Detail Tugas` dari blok bawah menjadi link kecil di area header kartu khusus tab `Tugas`
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [ ] 4. Commit perubahan di repo `mobile`, lalu sinkronkan repo root
+
+## Review (Lightweight Task Detail Link - 2026-04-26)
+
+- Jalur `Task -> Detail Tugas -> Back` tetap memakai baseline aman yang sudah dipulihkan sebelumnya; tidak ada perubahan lagi di route detail, stack, atau back behavior.
+- CTA `Detail Tugas` di kartu `Tugas` sekarang diperkecil jadi link header yang ringan di sisi kanan atas, dekat badge status, bukan blok besar di bawah isi kartu.
+- Kartu tetap satu `Pressable` utuh, jadi affordance eksplisit tetap ada tanpa memperkenalkan nested target sentuh atau jalur navigasi baru.
