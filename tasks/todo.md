@@ -1303,3 +1303,16 @@ Tanggal: 2026-04-20
 - Badge mark `ZxiruL` di section `About` sekarang bisa ditekan dan membuka profil GitHub creator.
 - Copy kecil di samping mark diperjelas menjadi ajakan membuka GitHub, dan badge diberi affordance link lewat `external-link` icon serta pressed state ringan.
 - Jika perangkat gagal membuka URL eksternal, app sekarang memberi dialog warning yang jelas, bukan diam tanpa feedback.
+
+## Plan (Explicit Task Detail Button - 2026-04-25)
+
+- [x] 1. Audit komponen kartu tugas dan pastikan route detail yang sudah ada bisa dipakai ulang tanpa duplikasi logic
+- [x] 2. Tambahkan tombol `Detail Tugas` sebagai aksi eksplisit hanya di tab `Tugas`, tanpa mengubah kartu tugas yang dipakai dashboard
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Explicit Task Detail Button - 2026-04-25)
+
+- Tab `Tugas` sekarang menampilkan tombol aksi `Detail Tugas` di setiap kartu, sehingga jalur ke halaman detail tidak hanya mengandalkan tap ke seluruh kartu.
+- Route detail yang sudah ada tetap dipakai ulang, jadi tidak ada duplikasi logic atau screen baru; tombol dan area kartu di tab `Tugas` sama-sama mengarah ke detail tugas yang sama.
+- Kartu `TaskCard` di dashboard tidak ikut berubah karena tombol detail dibuat opt-in dan hanya diaktifkan dari screen `Tugas`.
