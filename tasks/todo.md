@@ -1472,6 +1472,18 @@ Tanggal: 2026-04-20
 - `task/[id]` sekarang punya `contentStyle` eksplisit di level route, jadi background scene-nya tidak lagi hanya mewarisi `screenOptions` global. Ini penting karena opsi route spesifik biasanya dipakai paling dekat dengan card yang sedang dianimasikan.
 - Animasi route juga dimatikan lagi (`animation: 'none'`) untuk tes yang paling deterministik: bila white flash memang berasal dari frame transisi native card, jalur ini akan menghapusnya sepenuhnya.
 
+## Plan (Convert Task Detail To Popup Modal - 2026-04-26)
+
+- [x] 1. Ubah route `task/[id]` dari screen stack biasa menjadi popup/modal transparan
+- [x] 2. Refactor UI `task/[id]` menjadi card popup terpusat dengan backdrop, tombol tutup, dan konten scrollable
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu commit repo `mobile` dan sinkronkan repo root
+
+## Review (Convert Task Detail To Popup Modal - 2026-04-26)
+
+- User mengubah target UX: daripada terus mengejar artefak back transition di screen penuh, `Detail Tugas` sekarang dipindah ke popup/modal supaya keluar-masuk tidak lagi bergantung pada slide-back screen stack biasa.
+- Route `task/[id]` sekarang memakai `presentation: 'transparentModal'`, `animation: 'fade'`, `headerShown: false`, dan background transparan di stack level.
+- Isi detail juga sudah diubah ke overlay card dengan backdrop gelap, close button, dan konten yang tetap scrollable. Jadi entry point `Detail Tugas` tetap sama dari kartu tugas, tetapi pengalaman visualnya sekarang berupa popup di atas halaman `Tugas`.
+
 ## Plan (Keep Tasks Layout Mounted During Detail Return - 2026-04-26)
 
 - [x] 1. Hapus guard loading/resolving yang me-return screen penuh terpisah dari `tasks.tsx`
