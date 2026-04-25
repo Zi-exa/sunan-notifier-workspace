@@ -1,0 +1,34 @@
+.cursor/
+.DS_Store
+Thumbs.db
+
+# Local env and secrets
+*.env
+*.env.*
+*.key
+*.pem
+*.p8
+*.p12
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+*-firebase-adminsdk-*.json
+firebase-service-account*.json
+
+# Editor and local tooling
+.vscode/
+.idea/
+
+# Local build and dependency caches
+**/node_modules/
+**/.expo/
+**/dist/
+**/build/
+**/.gradle/
+**/.next/
+**/.turbo/
+**/.cache/
+
+# Supabase local temp state
+supabase/.temp/

@@ -1,0 +1,15 @@
+
+tambahkan filter date di halaman absensi dan tugas
+menghapus file atau kode yang tidak perlu
+4.tambahkan foto profile di halaman dashboard dan pengaturan
+9. urutan tugas atau absensi dari tanggal yang terbaru*
+10. tambahakn mode gelap dan terang
+14. ganti logo
+loading semua di awal screen
+15. tambahkan animasi loading Ketika di screen awal
+bisa di geser swipe ke kanan atau kiri untuk mengganti halaman
+
+
+
+
+ 
