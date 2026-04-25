@@ -1422,3 +1422,16 @@ Tanggal: 2026-04-20
 - Sumber yang masih paling masuk akal untuk flash cepat saat masuk dan keluar detail adalah layer React Navigation yang sempat kembali memakai `DarkTheme`/`DefaultTheme` mentah tanpa `contentStyle`, sehingga scene stack bisa fallback ke surface default saat push/pop.
 - Fix sekarang dipindahkan ke tempat yang elegan dan global: `NavThemeProvider` kembali memakai theme yang disinkronkan ke palet app, dan `Stack` root kembali memaksa `contentStyle` mengikuti `colors.bgBase`.
 - Koreksi tambahan user valid: `ScrollView` tidak boleh menjadi satu-satunya pemilik background screen untuk route detail. `task/[id]` sekarang dibungkus root `View` berwarna `bgBase`, lalu `ScrollView` hanya mengisi konten di atas root tersebut agar surface transisi tetap gelap bahkan sebelum konten selesai muncul.
+
+## Plan (Gate Theme Hydration Before Navigator Mount - 2026-04-26)
+
+- [x] 1. Audit `settingsStore`, `ThemeProvider`, dan navigator `(tabs)` untuk memverifikasi apakah persist hydration bisa membuat tab scene mount dengan palette awal yang salah
+- [x] 2. Tambahkan status hydration di `settingsStore` dan tahan root navigator sampai theme preference selesai direstore
+- [x] 3. Eksplisitkan lagi background screen `(tabs)` di stack root agar scene di belakang route detail tidak fallback ke default
+- [x] 4. Verifikasi dengan `typecheck` dan `lint`, lalu commit repo `mobile` dan sinkronkan repo root
+
+## Review (Gate Theme Hydration Before Navigator Mount - 2026-04-26)
+
+- Hipotesis user valid: `settingsStore` memang memakai `persist`, tetapi sebelumnya tidak punya sinyal hydration sendiri. Akibatnya navigator bisa mount dulu memakai `themeMode` awal (`system`) sebelum preference tersimpan seperti `dark` selesai direstore dari AsyncStorage.
+- Karena `(tabs)/_layout.tsx` memakai `sceneStyle: { backgroundColor: colors.bgBase }`, render awal dengan palette salah bisa membuat scene navigator di bawah `Detail Tugas` sempat terang saat push/pop, lalu baru gelap setelah hydration selesai.
+- Fix sekarang menahan `RootLayout` sampai `settingsStore` selesai rehydrate, sehingga `ThemeProvider`, `Stack`, dan material top tabs tidak pernah mount dengan theme sementara yang salah. `Stack.Screen name=\"(tabs)\"` juga sekarang eksplisit memakai `contentStyle` `bgBase` untuk memperkecil peluang fallback putih.
