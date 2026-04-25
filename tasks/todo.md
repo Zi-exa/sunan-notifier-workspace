@@ -1187,3 +1187,16 @@ Tanggal: 2026-04-20
 - Popup filter sekarang tidak lagi muncul secara mendadak. Komponen `FloatingFilterMenu` memakai animasi fade, slide-up, dan scale ringan saat buka-tutup, sehingga transisinya terasa lebih halus namun tetap cepat.
 - Backdrop ikut difade in/out agar perpindahan fokus ke menu terasa lebih natural, dan tombol floating juga sedikit membesar saat popup aktif untuk memberi feedback visual yang lebih rapi.
 - Perubahan ini tetap lokal di komponen reusable, jadi `Tugas` dan `Absensi` otomatis mendapat animasi yang sama tanpa perubahan perilaku filter di masing-masing screen.
+
+## Plan (Anchored Filter Motion Polish - 2026-04-25)
+
+- [x] 1. Audit motion popup filter setelah polish pertama dan cari cara agar animasinya terasa benar-benar muncul dari tombol
+- [x] 2. Tambahkan anchor motion diagonal dan micro-motion isi popup tanpa mengubah layout atau posisi tombol
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Anchored Filter Motion Polish - 2026-04-25)
+
+- Popup filter sekarang masuk dari arah tombol dengan drift diagonal kecil, bukan hanya fade dan slide vertikal, jadi gerakannya lebih terasa tertambat ke FAB filter.
+- Header popup dan setiap opsi filter ikut masuk dengan micro-motion berurutan yang halus, sehingga menu terasa lebih hidup tanpa menjadi berat atau lambat.
+- Ikon tombol filter juga mendapat rotasi kecil saat menu aktif, jadi hubungan visual antara tombol pemicu dan popup lebih jelas.
