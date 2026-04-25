@@ -1200,3 +1200,16 @@ Tanggal: 2026-04-20
 - Popup filter sekarang masuk dari arah tombol dengan drift diagonal kecil, bukan hanya fade dan slide vertikal, jadi gerakannya lebih terasa tertambat ke FAB filter.
 - Header popup dan setiap opsi filter ikut masuk dengan micro-motion berurutan yang halus, sehingga menu terasa lebih hidup tanpa menjadi berat atau lambat.
 - Ikon tombol filter juga mendapat rotasi kecil saat menu aktif, jadi hubungan visual antara tombol pemicu dan popup lebih jelas.
+
+## Plan (Settings Bottom CTA Safe Spacing - 2026-04-25)
+
+- [x] 1. Audit kenapa tombol logout di halaman `Settings` tertutup dock footer floating
+- [x] 2. Ubah padding bawah konten `Settings` menjadi dinamis mengikuti safe area dan tinggi dock
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Settings Bottom CTA Safe Spacing - 2026-04-25)
+
+- Akar masalahnya ada pada `ScrollView` `Settings` yang masih memakai `paddingBottom` statis `32`, padahal halaman ini punya area aksi bawah (`Simpan Pengaturan` dan `Keluar dari Akun`) serta dock footer floating yang menutup area bawah layar.
+- Padding bawah sekarang dihitung dinamis dari safe area bawah perangkat plus ruang ekstra untuk tinggi dock footer, sehingga kartu aksi di bagian paling bawah selalu berhenti di atas tab bar.
+- `scrollIndicatorInsets` juga ikut disesuaikan agar indikator scroll tidak berhenti di balik dock bawah.
