@@ -1329,3 +1329,16 @@ Tanggal: 2026-04-20
 - Koreksi user valid: bug tema tidak datang dari styling lokal screen `Tugas`, tetapi dari layer React Navigation yang masih memakai theme dasar dan content background default saat push-pop screen detail.
 - `NavThemeProvider` sekarang memakai navigation theme yang disinkronkan ke palet app, bukan `DarkTheme`/`DefaultTheme` mentah. Ini membuat warna `background`, `card`, `text`, dan `border` tetap konsisten dengan theme app sendiri.
 - `Stack` root juga sekarang punya `contentStyle` gelap mengikuti `colors.bgBase`, jadi transisi ke `Detail Tugas` lalu kembali ke tab `Tugas` tidak lagi memunculkan layar terang di mode malam.
+
+## Plan (Fix Native Dark Flash On Task Back - 2026-04-25)
+
+- [x] 1. Audit resource native Android (`styles.xml`, `colors.xml`, varian `values-night`) untuk mencari background terang yang masih dipakai saat transisi back
+- [x] 2. Sinkronkan `AppTheme` window/status/navigation background ke color resource yang punya varian light/dark
+- [x] 3. Verifikasi statis perubahan resource dan jalankan `typecheck`, `lint`, serta cek plugin lewat `expo config`
+- [ ] 4. Commit perubahan di repo `mobile`, lalu sinkronkan repo root dan catat lesson koreksinya
+
+## Review (Fix Native Dark Flash On Task Back - 2026-04-25)
+
+- Koreksi user valid: jika flash terang masih muncul saat `back`, berarti bug belum selesai di layer React Navigation. Audit lanjutan menunjukkan `AppTheme` Android masih menyimpan warna terang statis di `styles.xml`.
+- Solusi final dipindahkan ke plugin Expo lokal yang tracked di repo, bukan berhenti di folder generated `android/` yang di-ignore. Plugin itu sekarang menyuntik `app_background` ke `values` dan `values-night`, lalu mengikat `windowBackground`, `statusBarColor`, dan `navigationBarColor` ke resource tersebut.
+- Dengan jalur ini, prebuild/build Android berikutnya akan meregenerasi theme native yang konsisten dengan mode gelap app saat kembali dari `Detail Tugas`.
