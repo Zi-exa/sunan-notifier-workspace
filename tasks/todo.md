@@ -1316,3 +1316,16 @@ Tanggal: 2026-04-20
 - Tab `Tugas` sekarang menampilkan tombol aksi `Detail Tugas` di setiap kartu, sehingga jalur ke halaman detail tidak hanya mengandalkan tap ke seluruh kartu.
 - Route detail yang sudah ada tetap dipakai ulang, jadi tidak ada duplikasi logic atau screen baru; tombol dan area kartu di tab `Tugas` sama-sama mengarah ke detail tugas yang sama.
 - Kartu `TaskCard` di dashboard tidak ikut berubah karena tombol detail dibuat opt-in dan hanya diaktifkan dari screen `Tugas`.
+
+## Plan (Fix Dark Theme Return From Task Detail - 2026-04-25)
+
+- [x] 1. Audit layout navigasi root dan screen detail tugas untuk mencari sumber background terang saat kembali ke tab `Tugas`
+- [x] 2. Perbaiki theme React Navigation / stack content background agar transisi push-pop tetap mengikuti mode gelap
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile`, lalu sinkronkan repo root dan catat lesson baru
+
+## Review (Fix Dark Theme Return From Task Detail - 2026-04-25)
+
+- Koreksi user valid: bug tema tidak datang dari styling lokal screen `Tugas`, tetapi dari layer React Navigation yang masih memakai theme dasar dan content background default saat push-pop screen detail.
+- `NavThemeProvider` sekarang memakai navigation theme yang disinkronkan ke palet app, bukan `DarkTheme`/`DefaultTheme` mentah. Ini membuat warna `background`, `card`, `text`, dan `border` tetap konsisten dengan theme app sendiri.
+- `Stack` root juga sekarang punya `contentStyle` gelap mengikuti `colors.bgBase`, jadi transisi ke `Detail Tugas` lalu kembali ke tab `Tugas` tidak lagi memunculkan layar terang di mode malam.
