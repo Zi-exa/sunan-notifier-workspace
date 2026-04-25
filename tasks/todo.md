@@ -1342,3 +1342,16 @@ Tanggal: 2026-04-20
 - Koreksi user valid: jika flash terang masih muncul saat `back`, berarti bug belum selesai di layer React Navigation. Audit lanjutan menunjukkan `AppTheme` Android masih menyimpan warna terang statis di `styles.xml`.
 - Solusi final dipindahkan ke plugin Expo lokal yang tracked di repo, bukan berhenti di folder generated `android/` yang di-ignore. Plugin itu sekarang menyuntik `app_background` ke `values` dan `values-night`, lalu mengikat `windowBackground`, `statusBarColor`, dan `navigationBarColor` ke resource tersebut.
 - Dengan jalur ini, prebuild/build Android berikutnya akan meregenerasi theme native yang konsisten dengan mode gelap app saat kembali dari `Detail Tugas`.
+
+## Plan (Fix Task Detail White Flash Surface - 2026-04-25)
+
+- [x] 1. Audit ulang screen `Detail Tugas` dan route option-nya untuk mencari surface putih yang masih bisa terlihat sangat cepat saat transisi
+- [x] 2. Pastikan root surface `Detail Tugas` gelap penuh dan ubah animasi route ke transisi yang tidak menonjolkan blank card
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [ ] 4. Commit perubahan di repo `mobile`, lalu sinkronkan repo root dan catat lesson baru
+
+## Review (Fix Task Detail White Flash Surface - 2026-04-25)
+
+- Screenshot terbaru menunjukkan header detail sudah benar, tetapi body screen masih bisa tampak putih sepersekian detik. Itu mengarah ke surface `Detail Tugas` sendiri, bukan lagi hanya theme navigation atau background native Android.
+- `Detail Tugas` sekarang tidak lagi me-return `ScrollView` langsung. Screen dibungkus root `View` berwarna theme gelap, dan `contentContainerStyle` scroll view juga ikut diberi background gelap + `flexGrow` supaya area kosong tidak fallback ke putih.
+- Route `task/[id]` juga sekarang memakai animasi `fade`, bukan slide horizontal default, sehingga transisi tidak lagi menonjolkan blank surface saat push/pop sangat cepat.
