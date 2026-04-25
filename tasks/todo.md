@@ -1128,3 +1128,20 @@ Tanggal: 2026-04-20
 - Guardrail keamanan ditambahkan lewat `.gitignore` root untuk mengecualikan `.cursor`, file env, service-account JSON, key/keystore, cache build, dan `supabase/.temp/`.
 - File sensitif/temp yang sengaja tidak ikut upload mencakup `mobile/.env`, `mobile/sunan-notifier-firebase-adminsdk-fbsvc-836e60584f.json`, seluruh cache/build lokal, serta `supabase/.temp/*`.
 - Commit root workspace yang ter-push adalah `09ffe2a` dengan message `chore: add safe workspace sources`, dan branch `master` sekarang tracking `origin/master`.
+
+## Plan (Android Native Splash Cleanup - 2026-04-25)
+
+- [x] 1. Audit asset dan config splash Android yang aktif, termasuk varian `drawable-night` dan launcher icon yang dipakai cold start di HP
+- [x] 2. Pastikan root cause antara native Android system splash vs in-app loading screen benar-benar terpisah
+- [x] 3. Bersihkan asset mark agar tidak punya fringe putih dan pisahkan jalur native splash dari background bitmap kotak
+- [x] 4. Ubah config/plugin splash Android agar system splash memakai logo transparan di atas background sistem, bukan bitmap penuh
+- [x] 5. Verifikasi lewat `expo config`, prebuild Android, dan inspeksi resource hasil generate sebelum commit
+
+## Review (Android Native Splash Cleanup - 2026-04-25)
+
+- Root cause utamanya ada dua: asset `sunan-notifier-mark.png` punya fringe putih pada piksel semi-transparan, dan plugin splash Android sebelumnya membangkitkan `splashscreen_logo.png` berupa bitmap penuh berlatar belakang. Saat dipakai sebagai `windowSplashScreenAnimatedIcon`, Android 12+/OEM splash merender seluruh bitmap itu sebagai kotak di tengah layar.
+- Asset mark dibersihkan dengan mempertahankan alpha tetapi menyeragamkan warna seluruh piksel non-transparan ke biru logo yang sebenarnya, sehingga halo putih di tepi logo hilang baik untuk launcher icon maupun loading screen React.
+- Konfigurasi splash dipindahkan ke plugin `expo-splash-screen` dengan `android.drawable.icon` dan `darkIcon`, lalu drawable XML baru mengarahkan system splash ke `@mipmap/ic_launcher_foreground`. Hasilnya background splash tetap diatur oleh `windowSplashScreenBackground`, sementara icon yang dirender sistem sekarang hanya logo transparan, bukan bitmap kotak.
+- Native splash pertama tetap akan muncul pada cold start di Android dan tidak bisa dihilangkan total dari source app, terutama pada Android 12+ atau OEM launcher tertentu. Perbaikan ini menargetkan kualitas dan konsistensinya, bukan menghapus mekanisme splash sistem.
+- Verifikasi yang lulus: `npm run typecheck`, `npm run lint`, `npx expo config --json`, dan `npx expo prebuild --platform android --no-install`. Hasil generate native menunjukkan `res/drawable/splashscreen_logo.xml` serta `res/drawable-night/splashscreen_logo.xml` transparan sudah menggantikan `splashscreen_logo.png` lama.
+- Verifikasi `assembleRelease` masih tertahan oleh bug native lain yang sudah ada sebelumnya: generated autolinking Android masih menyuntik `id.umk.sunannotifier.preview` ke `ReactNativeApplicationEntryPoint.java`. Itu tidak berasal dari splash fix ini, tetapi tetap perlu dibereskan terpisah agar build release lokal kembali hijau.
