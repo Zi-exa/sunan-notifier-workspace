@@ -1460,6 +1460,18 @@ Tanggal: 2026-04-20
 - Jika screen di bawah detail dibekukan dan navigator tab sendiri tidak punya surface wrapper yang eksplisit, slide-back bisa menyingkap blank/putih sepersekian detik sebelum scene `Tugas` benar-benar repaint.
 - Fix sekarang mematikan `freezeOnBlur` untuk route `(tabs)` dan `task/[id]`, lalu membungkus material top tabs dengan surface `bgBase` sendiri agar layer di bawah detail tetap hidup dan tetap gelap selama transisi.
 
+## Plan (Force Task Detail Native Card Background - 2026-04-26)
+
+- [x] 1. Set `contentStyle` eksplisit pada route `task/[id]` agar native stack punya background gelap langsung di level screen, bukan hanya global
+- [x] 2. Matikan animasi route `task/[id]` lagi sekarang setelah guard lain sudah terpasang, untuk meniadakan frame transisi yang bisa menyingkap layer putih
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu commit repo `mobile` dan sinkronkan repo root
+
+## Review (Force Task Detail Native Card Background - 2026-04-26)
+
+- Setelah guard layout, theme hydration, native appearance, dan unfrozen scene terpasang, titik paling sempit yang tersisa adalah card transition milik native stack untuk route `task/[id]` sendiri.
+- `task/[id]` sekarang punya `contentStyle` eksplisit di level route, jadi background scene-nya tidak lagi hanya mewarisi `screenOptions` global. Ini penting karena opsi route spesifik biasanya dipakai paling dekat dengan card yang sedang dianimasikan.
+- Animasi route juga dimatikan lagi (`animation: 'none'`) untuk tes yang paling deterministik: bila white flash memang berasal dari frame transisi native card, jalur ini akan menghapusnya sepenuhnya.
+
 ## Plan (Keep Tasks Layout Mounted During Detail Return - 2026-04-26)
 
 - [x] 1. Hapus guard loading/resolving yang me-return screen penuh terpisah dari `tasks.tsx`
