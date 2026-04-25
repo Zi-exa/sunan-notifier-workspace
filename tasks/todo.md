@@ -1484,6 +1484,18 @@ Tanggal: 2026-04-20
 - Route `task/[id]` sekarang memakai `presentation: 'transparentModal'`, `animation: 'fade'`, `headerShown: false`, dan background transparan di stack level.
 - Isi detail juga sudah diubah ke overlay card dengan backdrop gelap, close button, dan konten yang tetap scrollable. Jadi entry point `Detail Tugas` tetap sama dari kartu tugas, tetapi pengalaman visualnya sekarang berupa popup di atas halaman `Tugas`.
 
+## Plan (Preserve Tasks Header While Detail Modal Is Open - 2026-04-26)
+
+- [x] 1. Audit resolver judul header tab untuk memastikan kenapa route `task/[id]` jatuh ke fallback `Dashboard`
+- [x] 2. Simpan tab terakhir yang valid dan gunakan itu saat modal detail tugas terbuka
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu commit repo `mobile` dan sinkronkan repo root
+
+## Review (Preserve Tasks Header While Detail Modal Is Open - 2026-04-26)
+
+- Akar bug-nya ada di `TabsHeaderTitle`: komponen itu membaca `usePathname()` langsung, lalu `getAppTabRouteKeyFromPathname('/task/123')` jatuh ke fallback `index`, sehingga judul di header belakang modal berubah ke `Dashboard`.
+- Fix sekarang menyimpan tab terakhir yang valid di ref. Saat pathname normal tab berubah, ref ikut diperbarui. Saat pathname adalah route detail tugas (`/task/...`), header memakai tab terakhir itu, bukan fallback.
+- Hasilnya: ketika popup `Detail Tugas` muncul dari tab `Tugas`, header yang terlihat di belakang popup tetap `Tugas`.
+
 ## Plan (Keep Tasks Layout Mounted During Detail Return - 2026-04-26)
 
 - [x] 1. Hapus guard loading/resolving yang me-return screen penuh terpisah dari `tasks.tsx`
