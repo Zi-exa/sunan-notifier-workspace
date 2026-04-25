@@ -1264,3 +1264,16 @@ Tanggal: 2026-04-20
 - Koreksi user valid: meski sudah dirapatkan, clearance `Tugas` dan `Absensi` masih terasa lebih besar dari `Dashboard`.
 - Clearance konten untuk halaman filter sekarang tidak lagi punya nilai terpisah. `Tugas` dan `Absensi` memakai patokan yang sama dengan `Dashboard`, yaitu clearance dock standar.
 - Tombol filter tetap floating di atas dock, tetapi list konten sekarang berhenti pada baseline bawah yang sama seperti halaman dashboard.
+
+## Plan (Premium Filter Popup Visuals - 2026-04-25)
+
+- [x] 1. Audit komponen popup filter dan definisi opsi agar ikon bisa ditambahkan tanpa memecah typing
+- [x] 2. Polish visual popup: badge aktif, surface opsi yang lebih rapi, divider halus, dan ikon per kategori
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Premium Filter Popup Visuals - 2026-04-25)
+
+- Popup filter kini memakai header yang lebih premium dengan badge filter aktif, bukan hanya teks ringkas biasa.
+- Setiap opsi filter sekarang punya ikon kategori yang relevan di `Tugas` dan `Absensi`, jadi daftar filter lebih cepat dipindai.
+- Visual list opsi dirapikan dengan icon tile kecil, hint text ringan, dan divider antar-opsi yang lebih halus agar card popup terasa lebih polished.
