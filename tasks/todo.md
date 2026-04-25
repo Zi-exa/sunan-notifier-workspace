@@ -1290,3 +1290,16 @@ Tanggal: 2026-04-20
 - Koreksi user valid: versi premium sebelumnya terlalu ramai dan tinggi, terutama karena badge aktif, hint text, tile ikon, dan divider tambahan bertumpuk dalam ruang sempit.
 - Popup sekarang dipadatkan: header tinggal judul + status aktif, row opsi dibuat satu baris yang lebih pendek, dan elemen dekoratif sekunder dihapus.
 - Ikon kategori tetap dipertahankan, tetapi tampil lebih ringan tanpa tile besar, sehingga popup terasa jauh lebih rapi dan cepat dipindai.
+
+## Plan (Clickable About Mark - 2026-04-25)
+
+- [x] 1. Audit area mark di section `About` dan tentukan action link eksternal yang aman
+- [x] 2. Buat badge mark bisa ditekan untuk membuka profil GitHub dan tambahkan affordance visualnya
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Clickable About Mark - 2026-04-25)
+
+- Badge mark `ZxiruL` di section `About` sekarang bisa ditekan dan membuka profil GitHub creator.
+- Copy kecil di samping mark diperjelas menjadi ajakan membuka GitHub, dan badge diberi affordance link lewat `external-link` icon serta pressed state ringan.
+- Jika perangkat gagal membuka URL eksternal, app sekarang memberi dialog warning yang jelas, bukan diam tanpa feedback.
