@@ -1381,3 +1381,17 @@ Tanggal: 2026-04-20
 - Jalur dari tab `Tugas` ke `Detail Tugas` sekarang membawa parameter asal (`from=tasks`), jadi screen detail tahu kapan harus kembali ke tab itu lewat route stabil.
 - `Detail Tugas` sekarang tidak lagi mengandalkan pop default untuk kasus tersebut. Tombol back header dan tombol back Android di-override ke `router.dismissTo('/(tabs)/tasks')`, sehingga keluar dari detail tidak lagi memakai pop bawaan yang sempat memunculkan flash.
 - Untuk jalur lain yang bukan dari tab `Tugas`, fallback tetap aman: jika stack bisa kembali, pakai `router.back()`, dan kalau tidak bisa, route diganti ke `/(tabs)/tasks`.
+
+## Plan (Restore Safe Task Detail Flow - 2026-04-25)
+
+- [x] 1. Kembalikan `Detail Tugas` dan route stack ke baseline aman sebelum tombol detail ditambahkan
+- [x] 2. Sederhanakan `TaskCard` agar tombol `Detail Tugas` tetap ada tetapi tetap memakai single `Pressable` yang sama dengan kartu lama
+- [x] 3. Hapus workaround route/native yang ditambahkan khusus untuk bug ini tetapi tidak menyelesaikan akar masalah
+- [x] 4. Verifikasi dengan `typecheck` dan `lint`
+- [ ] 5. Commit perubahan di repo `mobile`, lalu sinkronkan repo root dan catat lesson baru
+
+## Review (Restore Safe Task Detail Flow - 2026-04-25)
+
+- Koreksi user valid: karena `Detail Tugas` sebelumnya aman dan bug baru muncul tepat setelah tombol `Detail Tugas` ditambahkan, akar masalah lebih masuk akal ada di implementasi CTA baru, bukan di route detail lama.
+- `Detail Tugas` dan route stack saya kembalikan ke baseline aman yang dipakai sebelum rangkaian workaround bug ini. Jadi screen detail kembali ke perilaku sederhana yang sebelumnya sudah terbukti stabil.
+- Tombol `Detail Tugas` tetap ada di kartu tugas, tetapi sekarang hanya menjadi CTA visual di dalam kartu `Pressable` yang sama. Tidak ada lagi nested `Pressable`, route param tambahan, custom back handler, atau override transition yang membuka regresi baru.
