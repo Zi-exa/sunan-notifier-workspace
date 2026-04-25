@@ -1408,3 +1408,16 @@ Tanggal: 2026-04-20
 - Jalur `Task -> Detail Tugas -> Back` tetap memakai baseline aman yang sudah dipulihkan sebelumnya; tidak ada perubahan lagi di route detail, stack, atau back behavior.
 - CTA `Detail Tugas` di kartu `Tugas` sekarang diperkecil jadi link header yang ringan di sisi kanan atas, dekat badge status, bukan blok besar di bawah isi kartu.
 - Kartu tetap satu `Pressable` utuh, jadi affordance eksplisit tetap ada tanpa memperkenalkan nested target sentuh atau jalur navigasi baru.
+
+## Plan (Restore Navigation Theme Flash Fix - 2026-04-26)
+
+- [x] 1. Bandingkan source sekarang dengan baseline sebelum CTA untuk memastikan bug flash bukan lagi berasal dari nested CTA atau route detail khusus
+- [x] 2. Kembalikan fix global React Navigation yang menyamakan theme navigation dan `Stack` content background dengan palet app
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile`, lalu sinkronkan repo root dan catat lesson koreksinya
+
+## Review (Restore Navigation Theme Flash Fix - 2026-04-26)
+
+- Audit git menunjukkan delta functional dari baseline aman sebelum CTA tinggal `detailLabel` visual di kartu `Tugas`; route `task/[id]` dan screen detail sendiri sudah kembali ke jalur lama.
+- Sumber yang masih paling masuk akal untuk flash cepat saat masuk dan keluar detail adalah layer React Navigation yang sempat kembali memakai `DarkTheme`/`DefaultTheme` mentah tanpa `contentStyle`, sehingga scene stack bisa fallback ke surface default saat push/pop.
+- Fix sekarang dipindahkan ke tempat yang elegan dan global: `NavThemeProvider` kembali memakai theme yang disinkronkan ke palet app, dan `Stack` root kembali memaksa `contentStyle` mengikuti `colors.bgBase`.
