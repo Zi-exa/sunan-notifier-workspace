@@ -1448,6 +1448,18 @@ Tanggal: 2026-04-20
 - Karena app punya theme preference sendiri lewat `settingsStore`, app bisa berada di dark mode walau native appearance belum dipaksa dark. Dalam kondisi itu, React screen gelap tetapi native layer dan scene transisi masih bisa memakai resource light sesaat.
 - Fix sekarang memanggil `Appearance.setColorScheme()` sesuai `themeMode` tersimpan sebelum navigator dirender, sehingga native app appearance ikut sinkron ke mode app dan resource background dark/light dipilih konsisten sejak awal.
 
+## Plan (Unfreeze Tabs Scene Under Task Detail - 2026-04-26)
+
+- [x] 1. Audit opsi native-stack yang relevan untuk memastikan screen `(tabs)` di bawah `Detail Tugas` tidak sedang di-freeze saat blur
+- [x] 2. Nonaktifkan freeze pada route `(tabs)` dan `task/[id]`, lalu beri surface background eksplisit pada material top tabs navigator
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu commit repo `mobile` dan sinkronkan repo root
+
+## Review (Unfreeze Tabs Scene Under Task Detail - 2026-04-26)
+
+- Audit type menunjukkan `freezeOnBlur` tersedia di native stack. Itu berarti route `(tabs)` yang berada di bawah `Detail Tugas` memang bisa dibekukan saat blur, lalu hidup lagi saat back transition dimulai.
+- Jika screen di bawah detail dibekukan dan navigator tab sendiri tidak punya surface wrapper yang eksplisit, slide-back bisa menyingkap blank/putih sepersekian detik sebelum scene `Tugas` benar-benar repaint.
+- Fix sekarang mematikan `freezeOnBlur` untuk route `(tabs)` dan `task/[id]`, lalu membungkus material top tabs dengan surface `bgBase` sendiri agar layer di bawah detail tetap hidup dan tetap gelap selama transisi.
+
 ## Plan (Keep Tasks Layout Mounted During Detail Return - 2026-04-26)
 
 - [x] 1. Hapus guard loading/resolving yang me-return screen penuh terpisah dari `tasks.tsx`
