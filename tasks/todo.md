@@ -1252,3 +1252,15 @@ Tanggal: 2026-04-20
 - Offset tombol filter floating diturunkan lagi, jadi FAB di `Tugas` dan `Absensi` duduk lebih dekat ke dock footer.
 - Clearance konten untuk halaman dengan FAB filter juga diperkecil lagi agar kartu terakhir tidak meninggalkan jarak kosong yang terlalu besar sebelum dock bawah.
 - `Dashboard`, `Kalender`, dan `Settings` tidak diubah lagi pada iterasi ini karena user sudah mengonfirmasi halaman-halaman itu sudah pas.
+
+## Plan (Match Filter Tabs to Dashboard Spacing - 2026-04-25)
+
+- [x] 1. Samakan clearance konten `Tugas` dan `Absensi` dengan clearance dock standar yang dipakai `Dashboard`
+- [x] 2. Verifikasi dengan `typecheck` dan `lint`
+- [x] 3. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Match Filter Tabs to Dashboard Spacing - 2026-04-25)
+
+- Koreksi user valid: meski sudah dirapatkan, clearance `Tugas` dan `Absensi` masih terasa lebih besar dari `Dashboard`.
+- Clearance konten untuk halaman filter sekarang tidak lagi punya nilai terpisah. `Tugas` dan `Absensi` memakai patokan yang sama dengan `Dashboard`, yaitu clearance dock standar.
+- Tombol filter tetap floating di atas dock, tetapi list konten sekarang berhenti pada baseline bawah yang sama seperti halaman dashboard.
