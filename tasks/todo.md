@@ -1435,3 +1435,15 @@ Tanggal: 2026-04-20
 - Hipotesis user valid: `settingsStore` memang memakai `persist`, tetapi sebelumnya tidak punya sinyal hydration sendiri. Akibatnya navigator bisa mount dulu memakai `themeMode` awal (`system`) sebelum preference tersimpan seperti `dark` selesai direstore dari AsyncStorage.
 - Karena `(tabs)/_layout.tsx` memakai `sceneStyle: { backgroundColor: colors.bgBase }`, render awal dengan palette salah bisa membuat scene navigator di bawah `Detail Tugas` sempat terang saat push/pop, lalu baru gelap setelah hydration selesai.
 - Fix sekarang menahan `RootLayout` sampai `settingsStore` selesai rehydrate, sehingga `ThemeProvider`, `Stack`, dan material top tabs tidak pernah mount dengan theme sementara yang salah. `Stack.Screen name=\"(tabs)\"` juga sekarang eksplisit memakai `contentStyle` `bgBase` untuk memperkecil peluang fallback putih.
+
+## Plan (Keep Tasks Layout Mounted During Detail Return - 2026-04-26)
+
+- [x] 1. Hapus guard loading/resolving yang me-return screen penuh terpisah dari `tasks.tsx`
+- [x] 2. Pindahkan state loading, resolving, dan error menjadi state inline di dalam layout utama `Tugas`
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu commit repo `mobile` dan sinkronkan repo root
+
+## Review (Keep Tasks Layout Mounted During Detail Return - 2026-04-26)
+
+- Koreksi user valid: kalau tab `Tugas` sempat remount dan jatuh ke `return <LoadingView />`, screen di bawah route detail ikut berganti total. Itu bisa memunculkan flash walau route detail sendiri sudah dijaga background-nya.
+- `tasks.tsx` sekarang selalu mempertahankan root `View` + `ScrollView` yang sama. Yang berubah hanya isi area list: loading card inline, resolving card inline, error state inline, atau daftar tugas.
+- Dengan ini, saat kembali dari `Detail Tugas`, screen dasar tidak lagi tukar ke screen loading penuh hanya karena query tugas sedang re-evaluate sebentar.
