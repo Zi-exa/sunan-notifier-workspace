@@ -1145,3 +1145,17 @@ Tanggal: 2026-04-20
 - Native splash pertama tetap akan muncul pada cold start di Android dan tidak bisa dihilangkan total dari source app, terutama pada Android 12+ atau OEM launcher tertentu. Perbaikan ini menargetkan kualitas dan konsistensinya, bukan menghapus mekanisme splash sistem.
 - Verifikasi yang lulus: `npm run typecheck`, `npm run lint`, `npx expo config --json`, dan `npx expo prebuild --platform android --no-install`. Hasil generate native menunjukkan `res/drawable/splashscreen_logo.xml` serta `res/drawable-night/splashscreen_logo.xml` transparan sudah menggantikan `splashscreen_logo.png` lama.
 - Verifikasi `assembleRelease` masih tertahan oleh bug native lain yang sudah ada sebelumnya: generated autolinking Android masih menyuntik `id.umk.sunannotifier.preview` ke `ReactNativeApplicationEntryPoint.java`. Itu tidak berasal dari splash fix ini, tetapi tetap perlu dibereskan terpisah agar build release lokal kembali hijau.
+
+## Plan (In-App About Section - 2026-04-25)
+
+- [x] 1. Audit jalur paling masuk akal untuk menaruh `About` di dalam aplikasi tanpa merusak alur settings yang sudah ringkas
+- [x] 2. Tambahkan section `About` yang konsisten dengan desain app dan tampilkan mark `ZxiruL`
+- [x] 3. Verifikasi hasil dengan `typecheck` dan `lint`
+- [ ] 4. Commit perubahan di repo `mobile` lalu sinkronkan repo root yang menyimpan task log
+
+## Review (In-App About Section - 2026-04-25)
+
+- Section `About` ditambahkan ke halaman `Settings` dengan pola accordion yang sama seperti section lain, jadi tidak merusak ritme visual maupun area aksi utama.
+- Kontennya memuat identitas aplikasi, versi aktif dari config Expo, ringkasan fungsi aplikasi, dan mark khusus `ZxiruL` sebagai signature yang terlihat jelas tetapi tetap menyatu dengan desain settings.
+- Penempatan dipilih di bawah `Mata Kuliah Dipantau` dan di atas card aksi, sehingga informasi aplikasi tetap mudah ditemukan tanpa menggeser struktur pengaturan inti.
+- Verifikasi statis selesai dengan `npm run typecheck` dan `npm run lint` di folder `mobile`.
