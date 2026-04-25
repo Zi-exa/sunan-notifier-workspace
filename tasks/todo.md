@@ -1436,6 +1436,18 @@ Tanggal: 2026-04-20
 - Karena `(tabs)/_layout.tsx` memakai `sceneStyle: { backgroundColor: colors.bgBase }`, render awal dengan palette salah bisa membuat scene navigator di bawah `Detail Tugas` sempat terang saat push/pop, lalu baru gelap setelah hydration selesai.
 - Fix sekarang menahan `RootLayout` sampai `settingsStore` selesai rehydrate, sehingga `ThemeProvider`, `Stack`, dan material top tabs tidak pernah mount dengan theme sementara yang salah. `Stack.Screen name=\"(tabs)\"` juga sekarang eksplisit memakai `contentStyle` `bgBase` untuk memperkecil peluang fallback putih.
 
+## Plan (Sync Native Appearance To App Theme - 2026-04-26)
+
+- [x] 1. Audit native Android theme resource dan konfirmasi apakah `windowBackground` sudah memakai color resource yang benar
+- [x] 2. Sinkronkan native app appearance ke `themeMode` tersimpan sebelum navigator dirender, agar resource day/night tidak tetap mengikuti default sistem saat app sebenarnya dipaksa dark
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu commit repo `mobile` dan sinkronkan repo root
+
+## Review (Sync Native Appearance To App Theme - 2026-04-26)
+
+- Audit menunjukkan `AppTheme` Android memang sudah memakai `@color/app_background`, jadi resource source-of-truth-nya tidak lagi hardcoded putih. Masalahnya bergeser ke pemilihan resource: `values` vs `values-night` masih mengikuti appearance native app saat startup.
+- Karena app punya theme preference sendiri lewat `settingsStore`, app bisa berada di dark mode walau native appearance belum dipaksa dark. Dalam kondisi itu, React screen gelap tetapi native layer dan scene transisi masih bisa memakai resource light sesaat.
+- Fix sekarang memanggil `Appearance.setColorScheme()` sesuai `themeMode` tersimpan sebelum navigator dirender, sehingga native app appearance ikut sinkron ke mode app dan resource background dark/light dipilih konsisten sejak awal.
+
 ## Plan (Keep Tasks Layout Mounted During Detail Return - 2026-04-26)
 
 - [x] 1. Hapus guard loading/resolving yang me-return screen penuh terpisah dari `tasks.tsx`
