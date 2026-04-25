@@ -1159,3 +1159,18 @@ Tanggal: 2026-04-20
 - Kontennya memuat identitas aplikasi, versi aktif dari config Expo, ringkasan fungsi aplikasi, dan mark khusus `ZxiruL` sebagai signature yang terlihat jelas tetapi tetap menyatu dengan desain settings.
 - Penempatan dipilih di bawah `Mata Kuliah Dipantau` dan di atas card aksi, sehingga informasi aplikasi tetap mudah ditemukan tanpa menggeser struktur pengaturan inti.
 - Verifikasi statis selesai dengan `npm run typecheck` dan `npm run lint` di folder `mobile`.
+
+## Plan (Floating Filter Popup - 2026-04-25)
+
+- [x] 1. Audit pola filter inline yang ada di halaman `Tugas` dan `Absensi`, serta posisi aman terhadap dock footer floating
+- [x] 2. Buat komponen floating filter button + popup reusable yang konsisten dengan tema aplikasi
+- [x] 3. Pasang di screen `Tugas` dan `Absensi`, lalu hapus filter inline lama
+- [x] 4. Verifikasi dengan `typecheck` dan `lint`
+- [x] 5. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Floating Filter Popup - 2026-04-25)
+
+- Filter inline di halaman `Tugas` dan `Absensi` dipindah menjadi tombol floating tunggal di kanan bawah, tepat di atas dock footer, sehingga area konten utama kembali bersih dan tidak lagi memakan tinggi layar di atas list.
+- Komponen reusable baru `FloatingFilterMenu` menangani tombol ikon, indikator filter aktif, backdrop tap-to-close, dan popup pilihan filter yang mengikuti tema terang/gelap.
+- Popup filter ditambatkan ke tombol floating yang sama, jadi interaksinya tetap cepat tetapi tidak lagi mengganggu swipe antar-tab maupun scroll vertikal screen.
+- Screen `Tugas` dan `Absensi` kini memakai komponen yang sama dan hanya mengirim daftar opsi masing-masing, sehingga pola filternya konsisten dan mudah dipelihara.
