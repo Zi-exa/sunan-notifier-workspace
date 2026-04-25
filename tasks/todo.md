@@ -1213,3 +1213,17 @@ Tanggal: 2026-04-20
 - Akar masalahnya ada pada `ScrollView` `Settings` yang masih memakai `paddingBottom` statis `32`, padahal halaman ini punya area aksi bawah (`Simpan Pengaturan` dan `Keluar dari Akun`) serta dock footer floating yang menutup area bawah layar.
 - Padding bawah sekarang dihitung dinamis dari safe area bawah perangkat plus ruang ekstra untuk tinggi dock footer, sehingga kartu aksi di bagian paling bawah selalu berhenti di atas tab bar.
 - `scrollIndicatorInsets` juga ikut disesuaikan agar indikator scroll tidak berhenti di balik dock bawah.
+
+## Plan (Tab Bottom Spacing Consistency - 2026-04-25)
+
+- [x] 1. Audit jarak bawah konten terhadap dock footer pada semua tab utama, bukan hanya `Settings`
+- [x] 2. Buat helper shared untuk clearance dock footer dan clearance tombol filter floating
+- [x] 3. Terapkan spacing yang lebih rapat namun aman pada `Dashboard`, `Tugas`, `Absensi`, `Kalender`, dan `Settings`
+- [x] 4. Verifikasi dengan `typecheck` dan `lint`
+- [x] 5. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Tab Bottom Spacing Consistency - 2026-04-25)
+
+- Audit menunjukkan spacing bawah memang belum konsisten: `Dashboard` dan `Kalender` masih memakai `paddingBottom` statis kecil, `Settings` sudah dinamis, sedangkan `Tugas` dan `Absensi` memakai padding statis terlalu besar setelah penambahan tombol filter floating.
+- Helper shared baru `floatingLayout.ts` sekarang memusatkan perhitungan clearance untuk dock footer dan tombol filter floating, jadi semua tab utama memakai patokan layout bawah yang sama.
+- Jarak konten ke dock di `Tugas` dan `Absensi` dibuat lebih rapat dengan menurunkan offset tombol filter dan clearance kontennya, sementara `Dashboard`, `Kalender`, dan `Settings` ikut dipindah ke pola dinamis yang sama agar hasilnya konsisten di seluruh tab.
