@@ -1227,3 +1227,16 @@ Tanggal: 2026-04-20
 - Audit menunjukkan spacing bawah memang belum konsisten: `Dashboard` dan `Kalender` masih memakai `paddingBottom` statis kecil, `Settings` sudah dinamis, sedangkan `Tugas` dan `Absensi` memakai padding statis terlalu besar setelah penambahan tombol filter floating.
 - Helper shared baru `floatingLayout.ts` sekarang memusatkan perhitungan clearance untuk dock footer dan tombol filter floating, jadi semua tab utama memakai patokan layout bawah yang sama.
 - Jarak konten ke dock di `Tugas` dan `Absensi` dibuat lebih rapat dengan menurunkan offset tombol filter dan clearance kontennya, sementara `Dashboard`, `Kalender`, dan `Settings` ikut dipindah ke pola dinamis yang sama agar hasilnya konsisten di seluruh tab.
+
+## Plan (Selective Tab Spacing Tuning - 2026-04-25)
+
+- [x] 1. Audit ulang hasil spacing setelah helper shared dipasang, lalu tentukan halaman mana yang memang sudah pas dan mana yang masih terlalu jauh
+- [x] 2. Koreksi hanya `Tugas`, `Absensi`, dan `Settings` tanpa mengubah `Dashboard` dan `Kalender` yang sudah sesuai
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`
+- [x] 4. Commit perubahan di repo `mobile` lalu sinkronkan repo root
+
+## Review (Selective Tab Spacing Tuning - 2026-04-25)
+
+- Koreksi user valid: setelah helper shared dipasang, `Dashboard` dan `Kalender` sudah pas, tetapi clearance untuk halaman dengan tombol filter floating (`Tugas` dan `Absensi`) masih terlalu longgar, dan `Settings` juga sedikit terlalu jauh.
+- `Dashboard` dan `Kalender` dibiarkan tetap memakai clearance dock standar. `Tugas` dan `Absensi` kini memakai clearance konten yang lebih rapat khusus untuk FAB filter, sementara `Settings` dikembalikan ke clearance dock standar tanpa tambahan ekstra.
+- Dengan pendekatan ini, spacing bawah tetap konsisten per kategori halaman, tetapi tidak dipaksa seragam secara buta ketika pola layout-nya memang berbeda.
