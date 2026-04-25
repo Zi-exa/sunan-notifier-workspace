@@ -1117,6 +1117,14 @@ Tanggal: 2026-04-20
 
 - [x] 1. Audit root workspace untuk file sensitif, temp, dan struktur repo yang aman dipublikasikan
 - [x] 2. Tetapkan strategi aman untuk folder `mobile` sebagai repo terpisah, bukan di-copy mentah ke repo root
-- [ ] 3. Tambahkan guardrail repo root (`.gitignore`, catatan submodule, dan pengecualian file sensitif)
-- [ ] 4. Inisialisasi repo root, tambahkan file aman + submodule `mobile`, lalu push ke GitHub
-- [ ] 5. Verifikasi isi repo root dan catat apa saja yang sengaja tidak di-upload
+- [x] 3. Tambahkan guardrail repo root (`.gitignore`, catatan submodule, dan pengecualian file sensitif)
+- [x] 4. Inisialisasi repo root, tambahkan file aman + submodule `mobile`, lalu push ke GitHub
+- [x] 5. Verifikasi isi repo root dan catat apa saja yang sengaja tidak di-upload
+
+## Review (Safe Root Workspace Upload - 2026-04-25)
+
+- Root workspace `D:\Belajar\sunan notifier` sekarang sudah menjadi git repo terpisah dan berhasil di-push ke `https://github.com/Zi-exa/sunan-notifier-workspace` dengan visibility `PRIVATE`.
+- Folder `mobile` tidak disalin ulang sebagai source mentah ke repo root. Ia direferensikan sebagai submodule ke repo aplikasi yang sudah lebih dulu aman dan aktif di `https://github.com/Zi-exa/sunan-notifier-mobile`, sehingga histori dan batas keamanan repo aplikasi tetap terjaga.
+- Guardrail keamanan ditambahkan lewat `.gitignore` root untuk mengecualikan `.cursor`, file env, service-account JSON, key/keystore, cache build, dan `supabase/.temp/`.
+- File sensitif/temp yang sengaja tidak ikut upload mencakup `mobile/.env`, `mobile/sunan-notifier-firebase-adminsdk-fbsvc-836e60584f.json`, seluruh cache/build lokal, serta `supabase/.temp/*`.
+- Commit root workspace yang ter-push adalah `09ffe2a` dengan message `chore: add safe workspace sources`, dan branch `master` sekarang tracking `origin/master`.
