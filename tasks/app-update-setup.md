@@ -134,8 +134,8 @@ Feed publik gratis yang sekarang dipakai:
    - `https://github.com/Zi-exa/sunan-notifier-releases`
 2. Manifest update:
    - `https://raw.githubusercontent.com/Zi-exa/sunan-notifier-releases/main/update.json`
-3. Release APK awal:
-   - `https://github.com/Zi-exa/sunan-notifier-releases/releases/tag/v1.0.0`
+3. Release APK aktif:
+   - `https://github.com/Zi-exa/sunan-notifier-releases/releases/tag/v1.0.1`
 
 Jadi implementasi app sekarang sudah aktif untuk jalur update APK manual.
 

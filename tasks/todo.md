@@ -1719,3 +1719,22 @@ Tanggal: 2026-04-20
 - Verifikasi akses:
   - manifest raw URL membalas `200`
   - asset APK release membalas redirect `302`, yang menandakan file release tersedia di GitHub
+
+## Plan (Stabilize Local APK Build After Update Feed Setup - 2026-04-27)
+
+- [x] 1. Kumpulkan log build lokal Android yang benar-benar menunjukkan titik macet, bukan hanya timeout kosong
+- [x] 2. Identifikasi apakah hang berasal dari task Gradle/Metro/toolchain atau perubahan project terbaru, lalu perbaiki bila sumbernya bisa dikendalikan dari repo
+- [x] 3. Jika build kembali stabil, refresh artefak release publik dan dokumentasikan hasilnya
+
+## Review Addendum (Stabilize Local APK Build After Update Feed Setup - 2026-04-27)
+
+- Timeout build yang saya lihat sebelumnya ternyata bukan hang Gradle di project, tetapi akibat cara saya menjalankan build lewat wrapper/logging background yang tidak menutup proses dengan baik.
+- Build release Android yang dijalankan langsung dengan env Java/Android yang benar berhasil normal:
+  - `gradlew.bat app:assembleRelease --console=plain --no-daemon`
+  - hasil: `BUILD SUCCESSFUL in 1m 22s`
+- Saya bump versi mobile dari `1.0.0` ke `1.0.1` agar feed update manual benar-benar memicu upgrade untuk user yang masih memasang APK `1.0.0`.
+- APK baru berhasil dibuild di:
+  - `mobile/android/app/build/outputs/apk/release/app-release.apk`
+- Feed GitHub publik juga sudah di-refresh:
+  - `update.json` sekarang menunjuk ke release `v1.0.1`
+  - release aktif: `https://github.com/Zi-exa/sunan-notifier-releases/releases/tag/v1.0.1`
