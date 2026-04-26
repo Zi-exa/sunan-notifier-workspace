@@ -1561,3 +1561,16 @@ Tanggal: 2026-04-20
 - Fix sekarang mempersempit auth/session-expired hanya ke kode yang memang menunjukkan sesi invalid (`invalidtoken`, `requireloginerror`, `require_login_exception`) dan menangani `require_login_exception` juga dari nama exception-nya langsung.
 - Saya juga menurunkan agresivitas fallback HTTP status: `401` tetap dianggap auth, tetapi `403` tidak lagi otomatis dianggap sesi habis. Dengan ini, akses ditolak pada endpoint tertentu tidak akan lagi memicu logout global.
 - Dampak yang diharapkan: user tetap login saat SUNAN menolak endpoint opsional atau fitur tertentu, sementara logout otomatis tetap terjadi saat token memang benar-benar invalid.
+
+## Plan (Hide Tabs Header During Initial Splash Gate - 2026-04-27)
+
+- [x] 1. Audit kenapa header `(tabs)` tetap muncul ketika `InitialDataGate` masih menampilkan splash/loading penuh
+- [x] 2. Tambahkan state boot ringan yang bisa dibaca root stack agar header tab disembunyikan selama preload awal
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu dokumentasikan hasil dan commit perubahan
+
+## Review (Hide Tabs Header During Initial Splash Gate - 2026-04-27)
+
+- Akar bug ada di pemisahan layer navigator: `InitialDataGate` hanya mengganti isi route `(tabs)` menjadi splash/loading, tetapi header `Dashboard` berasal dari `Stack.Screen name=\"(tabs)\"` di root layout, jadi header itu tetap hidup walau isi screen masih gate loading.
+- Fix sekarang menambahkan store kecil `tabsBootStore` sebagai sumber kebenaran status preload tab. `InitialDataGate` menulis `loading/ready/failed` ke store itu, dan root stack membaca statusnya untuk mematikan `headerShown` khusus route `(tabs)` selama gate masih `loading`.
+- `AppBootstrap` juga mereset status boot ke `loading` setiap sesi auth berubah, jadi login baru tidak mewarisi status `ready` dari sesi sebelumnya dan tidak sempat menampilkan header tab satu frame sebelum gate aktif.
+- Dampaknya: saat splash/loading penuh tampil di area tab, header `Dashboard` tidak lagi ikut muncul di atasnya. Begitu preload selesai atau gagal, header tab kembali tampil normal.
