@@ -1700,3 +1700,22 @@ Tanggal: 2026-04-20
 - Verifikasi ulang lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Publish Free GitHub APK Update Feed - 2026-04-27)
+
+- [x] 1. Audit artefak APK dan status repo GitHub yang akan dipakai untuk distribusi publik gratis
+- [x] 2. Buat repo publik distribusi terpisah, unggah APK release, lalu publikasikan `update.json` yang sesuai dengan checker app
+- [x] 3. Arahkan `.env` lokal ke manifest publik, verifikasi URL, lalu dokumentasikan hasilnya
+
+## Review Addendum (Publish Free GitHub APK Update Feed - 2026-04-27)
+
+- Repo source `Zi-exa/sunan-notifier-mobile` memang masih private, jadi saya tidak memakainya langsung untuk raw manifest/update publik.
+- Saya buat repo publik terpisah untuk distribusi gratis:
+  - `https://github.com/Zi-exa/sunan-notifier-releases`
+- Saya upload feed awal ke repo itu:
+  - `update.json` publik di `https://raw.githubusercontent.com/Zi-exa/sunan-notifier-releases/main/update.json`
+  - release tag `v1.0.0` dengan asset `app-release.apk`
+- `.env` lokal mobile sekarang sudah diarahkan ke raw manifest publik itu, jadi checker APK manual bisa langsung bekerja pada runtime lokal Anda.
+- Verifikasi akses:
+  - manifest raw URL membalas `200`
+  - asset APK release membalas redirect `302`, yang menandakan file release tersedia di GitHub

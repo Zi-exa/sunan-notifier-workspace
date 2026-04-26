@@ -126,13 +126,23 @@ npx eas update --branch production --message "Perbaikan notifikasi"
 
 Pastikan channel/branch EAS yang dipakai sesuai dengan build yang dipasang user.
 
-## Yang Masih Harus Anda Isi
+## Status Saat Ini
 
-Implementasi app sudah siap, tetapi dua data berikut belum bisa saya tebak:
+Feed publik gratis yang sekarang dipakai:
 
-1. URL publik file manifest JSON
-2. URL publik file APK hasil build terbaru
+1. Repo distribusi:
+   - `https://github.com/Zi-exa/sunan-notifier-releases`
+2. Manifest update:
+   - `https://raw.githubusercontent.com/Zi-exa/sunan-notifier-releases/main/update.json`
+3. Release APK awal:
+   - `https://github.com/Zi-exa/sunan-notifier-releases/releases/tag/v1.0.0`
 
-Tanpa dua URL itu:
-- EAS Update tetap bisa dipakai untuk patch JS
-- tapi jalur update APK manual akan diam/nonaktif
+Jadi implementasi app sekarang sudah aktif untuk jalur update APK manual.
+
+Untuk rilis berikutnya, yang perlu Anda isi/update hanya:
+
+1. file APK baru di GitHub Release
+2. isi `update.json`:
+   - `version`
+   - `apkUrl`
+   - opsional `notes`, `title`, `mandatory`
