@@ -1521,3 +1521,30 @@ Tanggal: 2026-04-20
 - Query tugas, kalender, dan absensi juga semuanya `enabled` hanya saat token/session masih ada. Jadi setelah auto logout, app tidak lagi mengambil data baru dari SUNAN yang dibutuhkan untuk memicu notifikasi berikutnya.
 - Notifikasi tugas/absensi yang dipakai aktif saat ini mayoritas datang dari sync lokal saat app sedang hidup (`sendImmediateTaskNotification` / `sendImmediateAttendanceNotification` dengan trigger 1 detik), bukan dari jadwal background mandiri yang tetap berjalan tanpa sesi aktif.
 - Kesimpulannya: jika app sering logout sendiri, sangat masuk akal kalau notifikasi baru tidak muncul, karena pipeline data dan komponen pemicunya memang berhenti ketika sesi SUNAN dianggap habis.
+
+## Plan (Prevent False Auto Logout From Optional SUNAN Endpoint Errors - 2026-04-27)
+
+- [x] 1. Audit semua kode error yang saat ini dianggap auth/session invalid dan cocokkan dengan endpoint opsional yang bisa gagal walau token masih valid
+- [x] 2. Sempitkan klasifikasi auth expiry agar hanya token/login yang benar-benar invalid yang memicu `expireSession`
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu catat akar masalah dan dampak fix ke notifikasi
+
+## Review (Prevent False Auto Logout From Optional SUNAN Endpoint Errors - 2026-04-27)
+
+- Akar masalah paling mungkin ada di klasifikasi auth yang terlalu agresif. Sebelumnya app menganggap `403`, `accessexception`, `usernotfullysetup`, dan `servicerequireslogin` sebagai sesi invalid, lalu `useSessionExpiryGuard` langsung memanggil `expireSession` untuk query yang gagal.
+- Ini berbahaya karena beberapa endpoint yang dipakai app bersifat opsional atau capability-sensitive, misalnya pengambilan quiz, calendar action events, calendar events, upcoming view, dan status submit per aktivitas. Jika salah satu endpoint itu diblok atau tidak tersedia di SUNAN, app bisa salah menganggap token habis lalu logout sendiri.
+- Fix sekarang mempersempit auth expiry ke kasus yang benar-benar menunjukkan sesi/token tidak valid: `invalidtoken`, `requireloginerror`, dan `require_login_exception`. Status HTTP `403` juga tidak lagi otomatis dianggap auth expiry; hanya `401` yang langsung diperlakukan sebagai sesi habis.
+- Dengan perubahan ini, error hak akses atau endpoint opsional yang tidak tersedia akan jatuh sebagai server error biasa. Query opsional bisa tetap ditangani oleh fallback existing tanpa menjatuhkan seluruh sesi, sehingga logout palsu dan hilangnya notifikasi ikut berkurang.
+
+## Plan (Fix False-Positive SUNAN Session Expiry - 2026-04-27)
+
+- [x] 1. Audit pemicu `expireSession` dan endpoint SUNAN yang sekarang bisa mengubah auth error menjadi logout global
+- [x] 2. Bedakan error token/session invalid dari error izin/fitur endpoint opsional, lalu implementasikan fix minimal
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, dokumentasikan hasil di task log dan lessons, lalu commit repo yang berubah
+
+## Review (Fix False-Positive SUNAN Session Expiry - 2026-04-27)
+
+- Akar bug paling mungkin ada pada klasifikasi auth yang terlalu agresif. `AUTH_ERROR_CODES` sebelumnya memasukkan `accessexception`, `usernotfullysetup`, dan `servicerequireslogin`, padahal kode-kode itu bisa muncul karena izin endpoint, konfigurasi service, atau fitur SUNAN tertentu yang tidak dibuka — bukan karena token user sudah invalid.
+- Karena `useSessionExpiryGuard` di query global akan memanggil `expireSession()` untuk setiap `AppError.kind === 'auth'`, satu endpoint opsional seperti quiz, kalender, atau submission status yang ditolak bisa menjatuhkan seluruh sesi user dan melempar app ke login.
+- Fix sekarang mempersempit auth/session-expired hanya ke kode yang memang menunjukkan sesi invalid (`invalidtoken`, `requireloginerror`, `require_login_exception`) dan menangani `require_login_exception` juga dari nama exception-nya langsung.
+- Saya juga menurunkan agresivitas fallback HTTP status: `401` tetap dianggap auth, tetapi `403` tidak lagi otomatis dianggap sesi habis. Dengan ini, akses ditolak pada endpoint tertentu tidak akan lagi memicu logout global.
+- Dampak yang diharapkan: user tetap login saat SUNAN menolak endpoint opsional atau fitur tertentu, sementara logout otomatis tetap terjadi saat token memang benar-benar invalid.
