@@ -1649,3 +1649,33 @@ Tanggal: 2026-04-20
 - Dampak:
   - setting `Tugas dibuka` sekarang tidak hanya tersimpan lokal di device
   - setelah login di device lain, install ulang, atau restore sesi yang sudah punya `appUserId`, app bisa memuat lagi preferensi yang sama dari backend
+
+## Plan (Add Manual APK + EAS Update Flow - 2026-04-27)
+
+- [x] 1. Audit fondasi update yang sudah ada (`expo-updates`, config EAS, env manifest APK, dan helper runtime) lalu pastikan scope implementasinya jelas
+- [x] 2. Implementasikan checker global yang memprioritaskan update APK manual di Android, lalu fallback ke EAS Update untuk patch JS
+- [x] 3. Verifikasi dengan `typecheck`, `lint`, dan config sanity, lalu dokumentasikan review hasil dan commit perubahan
+
+## Review Addendum (Add Manual APK + EAS Update Flow - 2026-04-27)
+
+- Fondasi update sekarang aktif di dua jalur:
+  - binary/manual APK update untuk distribusi APK langsung
+  - EAS Update untuk patch JS kecil yang bisa diambil tanpa install APK baru
+- Konfigurasi Expo/EAS:
+  - `expo-updates` sudah ditambahkan ke dependency mobile
+  - `app.json` sekarang memakai `runtimeVersion.policy = appVersion` dan `updates.url` ke project Expo yang aktif
+  - `eas.json` sekarang punya channel `development`, `preview`, dan `production` agar publish EAS Update tidak tercampur antar build profile
+- Runtime checker:
+  - komponen global `AppUpdateCoordinator` sekarang hidup di root layout
+  - checker menunggu boot app stabil dulu, lalu memprioritaskan manifest APK manual di Android
+  - jika tidak ada binary update manual, checker baru mencoba EAS Update dan mengunduh patch JS agar siap dipasang
+  - prompt update memakai dialog app yang konsisten, termasuk tombol aksi sekunder dan guard untuk update wajib
+- Konfigurasi manifest APK manual:
+  - env baru `EXPO_PUBLIC_UPDATE_MANIFEST_URL` dipakai untuk URL manifest JSON update APK
+  - format JSON yang didukung:
+    - flat: `{ "version": "1.0.1", "apkUrl": "https://...", "title": "...", "notes": "...", "mandatory": false }`
+    - nested Android: `{ "android": { "version": "1.0.1", "apkUrl": "https://..." } }`
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npx expo config --json`
