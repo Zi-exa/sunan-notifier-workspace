@@ -1535,6 +1535,19 @@ Tanggal: 2026-04-20
 - Fix sekarang mempersempit auth expiry ke kasus yang benar-benar menunjukkan sesi/token tidak valid: `invalidtoken`, `requireloginerror`, dan `require_login_exception`. Status HTTP `403` juga tidak lagi otomatis dianggap auth expiry; hanya `401` yang langsung diperlakukan sebagai sesi habis.
 - Dengan perubahan ini, error hak akses atau endpoint opsional yang tidak tersedia akan jatuh sebagai server error biasa. Query opsional bisa tetap ditangani oleh fallback existing tanpa menjatuhkan seluruh sesi, sehingga logout palsu dan hilangnya notifikasi ikut berkurang.
 
+## Plan (Make Auto Logout Maintenance-Aware - 2026-04-27)
+
+- [x] 1. Audit apakah auth error dari query background langsung membuang sesi tanpa verifikasi lanjutan
+- [x] 2. Tambahkan verifikasi sesi ringan sebelum `expireSession`, agar maintenance atau error endpoint opsional tidak langsung dianggap token invalid
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu catat perilaku baru dan dampaknya ke notifikasi
+
+## Review (Make Auto Logout Maintenance-Aware - 2026-04-27)
+
+- Setelah klasifikasi auth dipersempit, masih ada celah: setiap auth error dari query background tetap langsung memicu `expireSession` tanpa cross-check. Jika SUNAN sedang maintenance dan mengembalikan respons auth-like sesaat, sesi masih bisa terbuang walau token sebenarnya masih valid.
+- Fix sekarang menambahkan verifikasi sesi ringan lewat `core_webservice_get_site_info` sebelum app benar-benar logout. Hanya jika probe itu juga memastikan token invalid, sesi dibuang.
+- Jika probe mengembalikan `valid`, `maintenance`, atau `unavailable`, app tidak langsung logout. Ini menjaga user tetap login saat SUNAN sedang bermasalah atau ketika endpoint tertentu error sementara.
+- Guard ini juga didedup per signature error dan diberi cooldown singkat, jadi beberapa query yang gagal bersamaan tidak akan memicu logout/probe berulang-ulang dalam waktu rapat.
+
 ## Plan (Fix False-Positive SUNAN Session Expiry - 2026-04-27)
 
 - [x] 1. Audit pemicu `expireSession` dan endpoint SUNAN yang sekarang bisa mengubah auth error menjadi logout global
