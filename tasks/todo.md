@@ -1507,3 +1507,17 @@ Tanggal: 2026-04-20
 - Koreksi user valid: kalau tab `Tugas` sempat remount dan jatuh ke `return <LoadingView />`, screen di bawah route detail ikut berganti total. Itu bisa memunculkan flash walau route detail sendiri sudah dijaga background-nya.
 - `tasks.tsx` sekarang selalu mempertahankan root `View` + `ScrollView` yang sama. Yang berubah hanya isi area list: loading card inline, resolving card inline, error state inline, atau daftar tugas.
 - Dengan ini, saat kembali dari `Detail Tugas`, screen dasar tidak lagi tukar ke screen loading penuh hanya karena query tugas sedang re-evaluate sebentar.
+
+## Plan (Investigate Auto Logout Impact On Notifications - 2026-04-27)
+
+- [x] 1. Audit semua titik yang bisa mengubah sesi menjadi `unauthenticated`, terutama `expireSession` dan jalur logout
+- [x] 2. Cek apakah komponen sinkronisasi notifikasi dan query data SUNAN hanya aktif saat user masih `authenticated`
+- [x] 3. Rangkum dampaknya ke notifikasi yang sudah ada vs notifikasi baru yang harus dibuat saat app berjalan
+
+## Review (Investigate Auto Logout Impact On Notifications - 2026-04-27)
+
+- Auto logout memang berpotensi langsung mematikan alur notifikasi. `authStore.expireSession()` dan `logout()` sama-sama menghapus session secure store lalu mengubah status ke `unauthenticated`, jadi token SUNAN tidak lagi tersedia untuk query data.
+- Layout tab utama merender `AttendanceNotificationSync` dan `TaskNotificationSync` hanya ketika status auth masih `authenticated`. Begitu status berubah, route `(tabs)` redirect ke `/login`, sehingga dua komponen sinkronisasi itu ikut unmount dan berhenti memproses notifikasi.
+- Query tugas, kalender, dan absensi juga semuanya `enabled` hanya saat token/session masih ada. Jadi setelah auto logout, app tidak lagi mengambil data baru dari SUNAN yang dibutuhkan untuk memicu notifikasi berikutnya.
+- Notifikasi tugas/absensi yang dipakai aktif saat ini mayoritas datang dari sync lokal saat app sedang hidup (`sendImmediateTaskNotification` / `sendImmediateAttendanceNotification` dengan trigger 1 detik), bukan dari jadwal background mandiri yang tetap berjalan tanpa sesi aktif.
+- Kesimpulannya: jika app sering logout sendiri, sangat masuk akal kalau notifikasi baru tidak muncul, karena pipeline data dan komponen pemicunya memang berhenti ketika sesi SUNAN dianggap habis.
