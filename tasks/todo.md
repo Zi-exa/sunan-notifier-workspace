@@ -1611,6 +1611,12 @@ Tanggal: 2026-04-20
   - event absensi tanpa `timeduration` tidak lagi tersangkut selamanya di status `available`; setelah lewat hari lokalnya, status akan jatuh ke `closed` sehingga `Riwayat` bisa menangkapnya.
   - dedupe key absensi harian sekarang memakai tanggal lokal, bukan `toISOString()` UTC.
 - Risiko sisa yang belum saya ubah di batch ini:
-  - `Kalender` masih memakai rentang data server tetap dari sekitar “hari ini”, jadi navigasi ke tanggal/bulan yang jauh masih bisa terlihat kosong walau data sebenarnya ada di SUNAN.
   - setting `notifyTaskOpen` masih lokal-only; schema `user_settings` backend belum punya kolomnya, jadi saya sengaja tidak memaksa sync agar tidak merusak payload server.
   - dedupe notifikasi absensi harian masih volatile per lifecycle app; restart app di hari yang sama masih bisa mengulang notifikasi open/closing.
+
+## Review Addendum (Calendar Range Follow-up - 2026-04-27)
+
+- Gap kalender yang tersisa dari audit sebelumnya sekarang sudah ditutup. Query `calendar-events` tidak lagi selalu memakai rentang tetap sekitar “hari ini”.
+- `getCalendarEvents()` sekarang menerima `CalendarQueryRange`, hook `useCalendarEventsQuery()` menjadikan range bagian dari query key, dan screen `Kalender` menghitung range dari bulan yang sedang dilihat user.
+- `onMonthChange` dan `onDayPress` sekarang ikut menggeser `visibleMonth`, jadi saat user berpindah bulan, fetch server ikut berpindah ke bulan itu dengan padding beberapa hari di kiri/kanan.
+- `InitialDataGate` juga ikut memakai default calendar range yang sama, jadi preload awal dan query screen tidak lagi punya key kalender yang berbeda untuk bulan sekarang.
