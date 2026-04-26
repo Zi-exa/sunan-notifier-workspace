@@ -1620,3 +1620,10 @@ Tanggal: 2026-04-20
 - `getCalendarEvents()` sekarang menerima `CalendarQueryRange`, hook `useCalendarEventsQuery()` menjadikan range bagian dari query key, dan screen `Kalender` menghitung range dari bulan yang sedang dilihat user.
 - `onMonthChange` dan `onDayPress` sekarang ikut menggeser `visibleMonth`, jadi saat user berpindah bulan, fetch server ikut berpindah ke bulan itu dengan padding beberapa hari di kiri/kanan.
 - `InitialDataGate` juga ikut memakai default calendar range yang sama, jadi preload awal dan query screen tidak lagi punya key kalender yang berbeda untuk bulan sekarang.
+
+## Review Addendum (Persist Notification Dedupe - 2026-04-27)
+
+- Dedupe notifikasi tidak lagi hanya hidup di `useRef(new Set())` per komponen. Saya tambahkan store persist `notificationDedupeStore` berbasis AsyncStorage untuk menyimpan key notifikasi yang sudah pernah dikirim.
+- `TaskNotificationSync` sekarang memakai dedupe key yang stabil (`task-open` dan `task-closing` berbasis task id + timestamp penting), lalu memeriksa key itu dari store persist sebelum mengirim notifikasi lagi.
+- `AttendanceNotificationSync` sekarang juga memakai store persist yang sama, sehingga force-close lalu buka app lagi pada hari yang sama tidak lagi otomatis mengirim ulang notifikasi `attendance_open` atau `attendance_closing` untuk event yang sama.
+- Dedupe store juga punya pruning ringan berbasis umur key agar storage tidak tumbuh terus tanpa batas.
