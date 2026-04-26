@@ -1574,3 +1574,43 @@ Tanggal: 2026-04-20
 - Fix sekarang menambahkan store kecil `tabsBootStore` sebagai sumber kebenaran status preload tab. `InitialDataGate` menulis `loading/ready/failed` ke store itu, dan root stack membaca statusnya untuk mematikan `headerShown` khusus route `(tabs)` selama gate masih `loading`.
 - `AppBootstrap` juga mereset status boot ke `loading` setiap sesi auth berubah, jadi login baru tidak mewarisi status `ready` dari sesi sebelumnya dan tidak sempat menampilkan header tab satu frame sebelum gate aktif.
 - Dampaknya: saat splash/loading penuh tampil di area tab, header `Dashboard` tidak lagi ikut muncul di atasnya. Begitu preload selesai atau gagal, header tab kembali tampil normal.
+
+## Plan (Audit All Main App Functions - 2026-04-27)
+
+- [ ] 1. Petakan area fitur utama yang harus diuji: auth, dashboard, tugas, detail tugas, absensi, kalender, settings, notifikasi, splash/loading, dan navigation
+- [ ] 2. Jalankan verifikasi statis/build yang tersedia dan audit code path utama untuk menemukan bug atau fitur yang belum lengkap
+- [ ] 3. Perbaiki bug yang jelas jika ditemukan, verifikasi ulang, lalu dokumentasikan hasil audit dan risiko yang masih tersisa
+
+## Plan (Full App QA Audit - 2026-04-27)
+
+- [x] 1. Petakan area fitur utama dan jalankan verifikasi statis/build yang tersedia (`typecheck`, `lint`, config/build sanity)
+- [x] 2. Audit code path utama untuk auth, notifikasi, dashboard, tugas, absensi, kalender, settings, navigation, splash/loading, dan modal
+- [x] 3. Perbaiki bug yang jelas jika ditemukan, verifikasi ulang, lalu dokumentasikan hasil, celah tersisa, dan commit perubahan
+
+## Review (Full App QA Audit - 2026-04-27)
+
+- Verifikasi statis lulus: `npm run typecheck`, `npm run lint`, dan `npx expo config --json`.
+- Bug notifikasi yang saya fix:
+  - tap notifikasi saat app cold start sebelumnya bisa hilang karena bootstrap hanya mendengar listener live. Sekarang app juga memulihkan `last notification response` saat startup.
+  - tap notifikasi saat user sudah logout tidak lagi melempar ke detail tugas kosong; payload sekarang diarahkan ke login dulu dan dibuka lagi setelah sesi kembali `authenticated`.
+  - parser payload notifikasi absensi sekarang menerima `attendanceEventId` dan `eventId`, jadi payload dari backend dan lokal sama-sama terbaca benar.
+  - sync notifikasi tugas sekarang menunggu `statusResolved !== false`, jadi boot preload ringan tidak lagi berisiko memicu notifikasi palsu sebelum status submit selesai dihydrate.
+- Bug auth/bootstrap yang saya fix:
+  - preload awal di `InitialDataGate` sekarang tidak lagi melewati jalur expiry guard. Jika boot fetch gagal karena auth dan probe sesi memastikan token invalid, app akan masuk jalur `expireSession()` yang sama dengan query biasa.
+- Bug screen-state yang saya fix:
+  - `Tugas`, `Absensi`, dan `Kalender` sekarang memprioritaskan error/loading upstream dari `coursesQuery`, jadi tidak lagi jatuh ke empty state palsu ketika query turunan `enabled: false`.
+  - `Kalender` section deadline sekarang konsisten dengan screen lain: `TaskCard` bisa dibuka ke detail tugas.
+  - `Dashboard` error state sekarang tetap punya jalur retry lewat pull-to-refresh, tidak lagi memutus user di layar statis.
+- Bug detail tugas yang saya fix:
+  - detail tugas sekarang guarded oleh auth state; jika sesi tidak valid, route tidak lagi menampilkan popup “Tugas tidak ditemukan”.
+  - state error query di detail tugas sekarang dibedakan dari “task not found”, lengkap dengan retry CTA.
+  - tinggi modal detail tugas sekarang dihitung dari tinggi window nyata, bukan konstanta hardcoded.
+- Bug runtime/splash yang saya fix:
+  - animasi dot di `AppSplashScreen` sekarang berhenti bersih saat unmount, jadi tidak lagi meninggalkan chain animasi yang terus hidup di background.
+- Bug absensi yang saya fix:
+  - event absensi tanpa `timeduration` tidak lagi tersangkut selamanya di status `available`; setelah lewat hari lokalnya, status akan jatuh ke `closed` sehingga `Riwayat` bisa menangkapnya.
+  - dedupe key absensi harian sekarang memakai tanggal lokal, bukan `toISOString()` UTC.
+- Risiko sisa yang belum saya ubah di batch ini:
+  - `Kalender` masih memakai rentang data server tetap dari sekitar “hari ini”, jadi navigasi ke tanggal/bulan yang jauh masih bisa terlihat kosong walau data sebenarnya ada di SUNAN.
+  - setting `notifyTaskOpen` masih lokal-only; schema `user_settings` backend belum punya kolomnya, jadi saya sengaja tidak memaksa sync agar tidak merusak payload server.
+  - dedupe notifikasi absensi harian masih volatile per lifecycle app; restart app di hari yang sama masih bisa mengulang notifikasi open/closing.
