@@ -1627,3 +1627,25 @@ Tanggal: 2026-04-20
 - `TaskNotificationSync` sekarang memakai dedupe key yang stabil (`task-open` dan `task-closing` berbasis task id + timestamp penting), lalu memeriksa key itu dari store persist sebelum mengirim notifikasi lagi.
 - `AttendanceNotificationSync` sekarang juga memakai store persist yang sama, sehingga force-close lalu buka app lagi pada hari yang sama tidak lagi otomatis mengirim ulang notifikasi `attendance_open` atau `attendance_closing` untuk event yang sama.
 - Dedupe store juga punya pruning ringan berbasis umur key agar storage tidak tumbuh terus tanpa batas.
+
+## Plan (Persist Remote Task-Open Notification Setting - 2026-04-27)
+
+- [x] 1. Audit jalur `notifyTaskOpen` di mobile, repository Supabase, dan schema backend agar gap sync-nya jelas
+- [x] 2. Implementasikan persistence penuh: schema/migration, save payload, dan hydrate settings dari backend saat sesi aktif
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu dokumentasikan hasil dan commit
+
+## Review Addendum (Persist Remote Task-Open Notification Setting - 2026-04-27)
+
+- Gap `notifyTaskOpen` yang tadinya lokal-only sekarang ditutup end-to-end.
+- Mobile:
+  - payload `saveUserSettings()` sekarang ikut mengirim `notifyTaskOpen`
+  - repository punya `loadUserSettings()` untuk membaca settings dari backend
+  - `settingsStore` punya `applyRemoteSettings()` agar state lokal bisa dihydrate dari server
+  - `AppBootstrap` sekarang menarik settings remote saat sesi authenticated aktif dan `appUserId` tersedia
+- Backend/schema:
+  - `user_settings` sekarang punya kolom `notify_task_open boolean not null default true`
+  - saya tambahkan migration incremental `20260427_0002_add_notify_task_open.sql`
+  - file init schema juga diselaraskan agar bootstrap database baru tidak tertinggal
+- Dampak:
+  - setting `Tugas dibuka` sekarang tidak hanya tersimpan lokal di device
+  - setelah login di device lain, install ulang, atau restore sesi yang sudah punya `appUserId`, app bisa memuat lagi preferensi yang sama dari backend

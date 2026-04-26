@@ -16,6 +16,7 @@ create table if not exists user_settings (
   notify_new_task boolean not null default true,
   notify_deadline_h1 boolean not null default true,
   notify_deadline_today boolean not null default true,
+  notify_task_open boolean not null default true,
   notify_attendance boolean not null default true,
   poll_interval_minutes int not null default 15 check (poll_interval_minutes in (15, 30, 60)),
   dnd_start time not null default '22:00',
