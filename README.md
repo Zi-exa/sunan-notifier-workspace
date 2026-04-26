@@ -64,6 +64,7 @@ Sprint 4:
    - EXPO_PUBLIC_SUPABASE_URL
    - EXPO_PUBLIC_SUPABASE_ANON_KEY
    - EXPO_PUBLIC_EXPO_PROJECT_ID (opsional, tapi disarankan)
+   - EXPO_PUBLIC_UPDATE_MANIFEST_URL (opsional, khusus update APK manual; jangan isi dengan URL `u.expo.dev`)
    - EXPO_PUBLIC_USE_MOCK_DATA=true untuk mode demo
 
 4. Jalankan aplikasi:
@@ -130,3 +131,13 @@ Ringkasan jalur cepat:
 
 Panduan lengkap ada di:
 - `tasks/local-android-build.md`
+
+## Update In-App
+
+Project ini sekarang mendukung dua jalur update:
+- update APK manual lewat manifest JSON publik
+- EAS Update untuk patch JS kecil
+
+Panduan setup lengkap ada di:
+- `tasks/app-update-setup.md`
+- `mobile/update-manifest.example.json`

@@ -1679,3 +1679,24 @@ Tanggal: 2026-04-20
   - `npm run typecheck`
   - `npm run lint`
   - `npx expo config --json`
+
+## Plan (Complete Manual APK Update Setup Docs - 2026-04-27)
+
+- [x] 1. Audit bagian yang masih kurang untuk update APK manual setelah checker runtime aktif
+- [x] 2. Tambahkan template manifest JSON dan dokumentasi hosting/config yang dibutuhkan user
+- [x] 3. Verifikasi akhir, lalu dokumentasikan hasil dan commit perubahan
+
+## Review Addendum (Complete Manual APK Update Setup Docs - 2026-04-27)
+
+- Jalur update APK manual sekarang tidak hanya siap di runtime, tetapi juga sudah punya artefak setup yang bisa langsung dipakai user.
+- `mobile/update-manifest.example.json` sekarang menjadi template manifest APK manual yang valid untuk checker app.
+- `tasks/app-update-setup.md` sekarang menjelaskan:
+  - perbedaan jalur APK manual vs EAS Update
+  - format manifest JSON yang didukung
+  - tempat aman untuk hosting JSON dan APK
+  - cara mengisi `EXPO_PUBLIC_UPDATE_MANIFEST_URL`
+  - urutan rilis update APK manual dan publish EAS Update
+- `README.md` dan `.env.example` juga diselaraskan supaya tidak lagi menyesatkan user mengisi URL `u.expo.dev` ke variabel manifest APK manual.
+- Verifikasi ulang lulus:
+  - `npm run typecheck`
+  - `npm run lint`
