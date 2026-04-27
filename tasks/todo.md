@@ -2499,3 +2499,30 @@ Tanggal: 2026-04-20
   - choosing `Sistem`, `Gelap`, or `Terang` changes the app theme immediately
   - pressing `Simpan Pengaturan` is no longer required for display theme changes alone
   - the save button still applies notification, polling, DND, and monitored-course changes
+
+## Plan (Simplify Task And Attendance Cards - 2026-04-28)
+
+- [x] 1. Audit the active redesign cards used by `Tugas`, `Absensi`, `Dashboard`, and `Kalender`, then identify which text blocks can be compressed without removing functions
+- [x] 2. Simplify task and attendance card hierarchy so secondary details become compact meta chips and CTA labels become shorter, while keeping the same actions and statuses
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then record the review and commit the changes
+
+## Review Addendum (Simplify Task And Attendance Cards - 2026-04-28)
+
+- Root cause:
+  - the redesign cards exposed too many full-text rows at once: long status labels, separate activity rows, multi-line intros/descriptions, and full-width time rows
+  - even though the functions were correct, the reading order was noisy and the main signal (title + current status) competed with secondary metadata
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` now compresses activity/open/deadline info into compact chips under the title, shortens some status copy, and limits intro copy to one line
+  - `mobile/components/Redesign/AttendanceCard.tsx` now shortens status labels, turns start/close times into compact chips, trims description to one line, and shortens the SUNAN button copy
+  - `mobile/app/(tabs)/tasks.tsx` shortens the explicit CTA label from `Detail Tugas` to `Detail`
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Rapikan card tugas dan absensi`
+  - update group: `5ae2cd9b-45c4-4fed-8b42-86f2c5ada3f2`
+  - commit delivered: `bd7d5101855fc715906b957bbb8145987013ad8f`
+- Expected user behavior now:
+  - task and attendance cards still keep the same navigation, quick links, and status logic
+  - the cards should feel less text-heavy because secondary details are grouped into short chips instead of several full rows
