@@ -1738,3 +1738,29 @@ Tanggal: 2026-04-20
 - Feed GitHub publik juga sudah di-refresh:
   - `update.json` sekarang menunjuk ke release `v1.0.1`
   - release aktif: `https://github.com/Zi-exa/sunan-notifier-releases/releases/tag/v1.0.1`
+
+## Plan (Fix Settings Server Sync Fallback - 2026-04-27)
+
+- [x] 1. Audit jalur save settings, `appUserId`, dan schema `user_settings` untuk menemukan kenapa save jatuh ke status lokal-only
+- [x] 2. Perbaiki alur sinkronisasi agar bisa recovery jika `appUserId` belum tersimpan dan fallback elegan jika backend masih schema lama
+- [x] 3. Verifikasi dengan `typecheck` dan `lint`, lalu dokumentasikan hasil dan commit
+
+## Review Addendum (Fix Settings Server Sync Fallback - 2026-04-27)
+
+- Akar masalahnya ada di dua jalur:
+  - save settings ke Supabase gagal total jika backend `user_settings` masih schema lama dan belum punya kolom `notify_task_open`
+  - app tidak punya recovery on-demand jika `appUserId` gagal tersimpan saat login pertama, jadi jalur sinkron server bisa buntu sampai user login ulang
+- Perbaikan di mobile:
+  - `mobile/lib/supabase/repositories.ts` sekarang fallback kompatibel:
+    - save settings mencoba payload baru dulu
+    - jika server menolak karena kolom `notify_task_open` belum ada, save diulang tanpa kolom itu
+    - load remote settings juga fallback ke select schema lama agar sync startup tidak pecah
+  - `mobile/lib/stores/settingsStore.ts` sekarang tidak menimpa `notifyTaskOpen` lokal jika backend lama belum mengirim field itu
+  - `mobile/lib/stores/authStore.ts` sekarang punya `setAppUserId()` agar hasil `syncUserProfile()` bisa dipersist ke sesi aktif tanpa memaksa login ulang
+  - `mobile/app/(tabs)/settings.tsx` sekarang mencoba memulihkan `appUserId` lewat `syncUserProfile()` sebelum menyerah ke mode lokal-only, dan dialog hasil save dibedakan antara:
+    - sinkron penuh
+    - sinkron server sebagian karena schema lama
+    - hanya tersimpan di perangkat karena profil app/server belum siap
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
