@@ -2069,3 +2069,51 @@ Tanggal: 2026-04-20
   - dashboard: `https://expo.dev/accounts/azhurel/projects/sunan-notifier/updates/2a8bce0f-9bdd-4830-9698-135b4645c08e`
 - User effect:
   - installed `1.0.1` users should receive the in-app EAS update prompt on next app launch when online, as long as the manual APK checker does not override it with a newer binary update first.
+
+## Plan (Verify In-App Update Prompt Visibility - 2026-04-27)
+
+- [x] 1. Audit the update coordinator flow to confirm whether installed `1.0.1` users will hit the EAS prompt or get short-circuited by the manual APK checker
+- [x] 2. Verify the live manual update manifest and local Expo config/runtime assumptions used by the prompt logic
+- [ ] 3. Document the result, including any gating conditions the user must satisfy to see the prompt
+
+## Plan (Fix EAS Update Prompt In Local Release APK - 2026-04-27)
+
+- [x] 1. Fix the Expo app config so locally generated preview/production binaries embed the correct `expo-updates` enabled flag and channel request headers
+- [x] 2. Regenerate the Android project for the production profile and verify the release manifest/runtime metadata now matches `1.0.1` + `production`
+- [x] 3. Run verification, document the root cause and fix, then commit and push both repos
+
+## Review Addendum (Verify In-App Update Prompt Visibility - 2026-04-27)
+
+- Audit result:
+  - the manual APK manifest at `EXPO_PUBLIC_UPDATE_MANIFEST_URL` currently reports version `1.0.1`, which matches the installed public APK version, so the APK updater path correctly stays silent
+  - `AppUpdateCoordinator` only checks `expo-updates` after the manual APK path returns no newer binary
+  - `fetchAvailableEasUpdateAsync()` is intentionally disabled in Expo Go and other dev runtimes, so the EAS prompt never appears there by design
+- Root cause:
+  - the locally built Android binary had stale native metadata from an old generated `android/` folder
+  - `android/app/src/main/AndroidManifest.xml` embedded `expo.modules.updates.ENABLED=false`
+  - no `expo-channel-name` request header was embedded in the binary, so the production branch update could not be targeted reliably even though it had already been published
+- User impact:
+  - the already-installed old APK cannot receive the published EAS update; it needs one fresh APK install built from the corrected native config first
+
+## Review Addendum (Fix EAS Update Prompt In Local Release APK - 2026-04-27)
+
+- Fix applied in source of truth:
+  - `mobile/app.config.js` now explicitly sets `updates.enabled=true` and injects `updates.requestHeaders['expo-channel-name']` from `EAS_BUILD_PROFILE`
+  - `mobile/package.json` local release scripts now force a production prebuild before Gradle, so they stop reusing stale `android/` metadata
+- Verification after regeneration:
+  - production Expo config resolves to `updates.enabled=true` and `requestHeaders.expo-channel-name=production`
+  - regenerated `android/app/src/main/AndroidManifest.xml` now contains:
+    - `expo.modules.updates.ENABLED=true`
+    - `expo.modules.updates.EXPO_UPDATE_URL=https://u.expo.dev/eb508cc1-ec67-415f-a234-bb2cdf068286`
+    - `expo.modules.updates.UPDATES_CONFIGURATION_REQUEST_HEADERS_KEY={"expo-channel-name":"production"}`
+  - regenerated Android resources now contain `expo_runtime_version=1.0.1`
+  - `android/app/build.gradle` now resolves to `versionName "1.0.1"`
+- Release verification:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run prebuild:android:production`
+  - `gradlew.bat app:assembleRelease` with explicit `JAVA_HOME` and Android SDK env vars
+  - fresh APK output: `mobile/android/app/build/outputs/apk/release/app-release.apk` at `2026-04-28 00:03:43`
+- Final user condition:
+  - Expo Go will still never show the EAS prompt
+  - a fresh production APK built after this fix should be able to receive the already-published EAS update group `2a8bce0f-9bdd-4830-9698-135b4645c08e`
