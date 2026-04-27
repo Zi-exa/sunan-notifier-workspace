@@ -1880,3 +1880,25 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Add Attendance Completed Label - 2026-04-27)
+
+- [x] 1. Audit sumber data absensi untuk memastikan apakah status hadir user bisa diambil akurat dari SUNAN
+- [x] 2. Tambahkan label `Sudah Absen` dengan jalur data yang aman dan fallback yang tidak merusak daftar absensi bila server menolak akses
+- [x] 3. Verifikasi, dokumentasikan hasil, lalu commit dan push
+
+## Review Addendum (Add Attendance Completed Label - 2026-04-27)
+
+- Audit menemukan bahwa data absensi utama app selama ini hanya berasal dari event kalender dan upcoming view, jadi tidak ada flag bawaan yang mengatakan user sudah mengisi absensi.
+- Plugin attendance Moodle ternyata punya web service resmi `mod_attendance_get_sessions` dan `attendance_log` per session, jadi saya pakai jalur itu sebagai sumber akurat bila SUNAN mengizinkannya.
+- Perubahan utama:
+  - `AttendanceItem` sekarang bisa membawa `attendanceInstanceId` dan `isMarked`
+  - mapper absensi dari kalender sekarang menyimpan `event.instance` sebagai identitas instance attendance
+  - query absensi sekarang mencoba mengambil daftar session per instance attendance, lalu mencocokkan session berdasarkan waktu mulai/durasi dan menandai `isMarked` jika `attendance_log` sudah berisi user aktif
+  - UI card absensi sekarang menampilkan badge `Sudah Absen` bila status itu berhasil terdeteksi
+- Fallback aman:
+  - jika SUNAN menolak akses ke web service session attendance untuk role mahasiswa, daftar absensi tetap berjalan normal tanpa logout atau error tambahan
+  - dalam kondisi itu badge `Sudah Absen` memang tidak tampil, karena app memilih tidak menebak status hadir user
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
