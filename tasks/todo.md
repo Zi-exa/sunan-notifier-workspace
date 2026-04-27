@@ -2397,6 +2397,22 @@ Tanggal: 2026-04-20
 
 ## Plan (Hotfix Update Coordinator Render Loop - 2026-04-28)
 
-- [ ] 1. Fix the `isUpdatePending` effect so it does not keep writing the same EAS update object into the store on every render
-- [ ] 2. Verify with `npm run typecheck` and `npm run lint`
-- [ ] 3. Publish a production EAS hotfix immediately because the current update crashes on user devices
+- [x] 1. Fix the `isUpdatePending` effect so it does not keep writing the same EAS update object into the store on every render
+- [x] 2. Verify with `npm run typecheck` and `npm run lint`
+- [x] 3. Publish a production EAS hotfix immediately because the current update crashes on user devices
+
+## Review Addendum (Hotfix Update Coordinator Render Loop - 2026-04-28)
+
+- Root cause:
+  - the `isUpdatePending` effect always called `setAvailableUpdate({ kind: 'eas', ... })` while `isUpdatePending` stayed true
+  - because it created a fresh object every render, Zustand updated global state every render and React eventually hit `Maximum update depth exceeded`
+- Fix:
+  - the coordinator now computes the next EAS `notes` first and exits early if the currently stored EAS update already has the same `notes`
+  - this keeps the pending update state stable instead of rewriting it on every render
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Hotfix loop update dialog`
+  - update group: `27ada8ed-51a0-4db6-9fe8-66daaa692721`
