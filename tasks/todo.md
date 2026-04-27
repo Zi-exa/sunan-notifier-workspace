@@ -2263,3 +2263,32 @@ Tanggal: 2026-04-20
   - when the update prompt appears, press `Nanti`
   - open `Pengaturan > About`
   - `Update aplikasi` should still show the path to continue the update
+
+## Plan (Republish EAS Update Prompt Test - 2026-04-28)
+
+- [ ] 1. Verify the current `production` branch/channel still targets runtime `1.0.1` and note the latest delivered group
+- [ ] 2. Publish one fresh `production` EAS update test so the already-updated APK can receive a new prompt again
+- [ ] 3. Document the new update group and exact retest steps, then leave both repos clean
+
+## Plan (Force One Newer EAS Prompt For Retest - 2026-04-28)
+
+- [x] 1. Verify whether the user-facing app is likely already on the newest published group, which would explain why no prompt appears
+- [x] 2. Publish one newer `production` EAS update from the current clean commit so the app definitely has a newer update to detect
+- [x] 3. Record the new group and retest steps, then keep both repos clean
+
+## Review Addendum (Force One Newer EAS Prompt For Retest - 2026-04-28)
+
+- Root cause for the missing prompt:
+  - production was already serving group `366ac2a1-e1ee-4007-ad3c-c5184c8eab93`
+  - local `mobile` HEAD was the same clean commit `97fa429d83a6a77662c5675c4bb843a25bb3bb40`
+  - so if the user had already pressed `Update`, there may simply have been no newer update left to prompt
+- Fix for the retest:
+  - published one newer production EAS update from the same clean commit
+  - message: `Tes ulang prompt update sesudah apply`
+  - group: `3aef3ca0-d6bb-47d4-9b3c-e2da98a23d55`
+- Verification:
+  - `npx eas branch:view production --json` now shows `3aef3ca0-d6bb-47d4-9b3c-e2da98a23d55` as the newest production group for runtime `1.0.1`
+- Exact user retest path:
+  - fully close the app
+  - open it again while online
+  - a new update prompt should now appear because there is definitely a newer group than the one already applied before this step
