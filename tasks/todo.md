@@ -2394,3 +2394,9 @@ Tanggal: 2026-04-20
   - open it again while online
   - when the new update prompt appears, press `Update sekarang`
   - after the app reloads, the `Update selesai` dialog with `Catatan update` should appear once
+
+## Plan (Hotfix Update Coordinator Render Loop - 2026-04-28)
+
+- [ ] 1. Fix the `isUpdatePending` effect so it does not keep writing the same EAS update object into the store on every render
+- [ ] 2. Verify with `npm run typecheck` and `npm run lint`
+- [ ] 3. Publish a production EAS hotfix immediately because the current update crashes on user devices
