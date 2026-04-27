@@ -1749,6 +1749,29 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Polish Notification and Detail Microcopy - 2026-04-27)
+
+- [x] 1. Audit copy di notifikasi, popup detail tugas, dan dialog update agar nada bahasanya tetap seragam
+- [x] 2. Rapikan judul dan isi pesan menjadi lebih alami dan lebih mudah dipahami user
+- [x] 3. Verifikasi, dokumentasikan hasil, lalu commit dan push
+
+## Review Addendum (Polish Notification and Detail Microcopy - 2026-04-27)
+
+- Fokus audit:
+  - judul dan isi notifikasi di `mobile/lib/notifications/index.ts`
+  - copy notifikasi realtime di `mobile/components/app/TaskNotificationSync.tsx` dan `mobile/components/app/AttendanceNotificationSync.tsx`
+  - dialog update di `mobile/components/app/AppUpdateCoordinator.tsx`
+  - header popup di `mobile/app/task/[id].tsx`
+- Perubahan utama:
+  - `deadline besok` / `deadline hari ini` dirapikan jadi `berakhir besok` / `berakhir hari ini`
+  - `Tugas/Quiz ...` dipadatkan jadi `Tugas ...`
+  - notifikasi absensi dan tugas tidak lagi memakai kalimat terlalu ramai seperti `segera submit sebelum terlambat`
+  - dialog update pakai judul yang lebih sederhana seperti `Versi baru tersedia` dan `Belum bisa dibuka`
+  - header popup detail tugas diselaraskan jadi `RINGKASAN` + `Detail Tugas`
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
   - `npx expo config --json`
 
 ## Plan (Complete Manual APK Update Setup Docs - 2026-04-27)
