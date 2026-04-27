@@ -2471,3 +2471,31 @@ Tanggal: 2026-04-20
   - when the update popup appears, tap outside the card instead of pressing `Update sekarang`
   - open `Pengaturan > About > Update aplikasi`
   - the card should still show `Lihat Update`, and pressing it should reopen the same deferred update prompt instead of saying the app is already current
+
+## Plan (Apply Theme Changes Immediately - 2026-04-28)
+
+- [x] 1. Remove the draft-only theme flow in `settings.tsx` so selecting `Sistem`, `Gelap`, or `Terang` writes straight to the settings store
+- [x] 2. Keep `Simpan Pengaturan` responsible only for the remaining draft-based settings so changing theme alone no longer counts as unsaved work
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then ship the change in repo history and, if still JS-only, as a production EAS update for device testing
+
+## Review Addendum (Apply Theme Changes Immediately - 2026-04-28)
+
+- Root cause:
+  - the `Tampilan` section still used `draftThemeMode`, so changing theme only updated a local draft and still waited for `Simpan Pengaturan`
+  - because of that, a pure theme change counted as unsaved work even though theme is a local display preference that users expect to see immediately
+- Fix:
+  - `mobile/app/(tabs)/settings.tsx` now reads `themeMode` directly from the settings store when rendering the theme summary and selected state
+  - tapping `Sistem`, `Gelap`, or `Terang` now calls `setThemeMode()` immediately
+  - theme was removed from the save-only `hasChanges` calculation and from `handleSync()`, so `Simpan Pengaturan` only covers the remaining draft-based settings
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Tema langsung berubah tanpa simpan`
+  - update group: `737ddb7f-dfbc-42f6-9047-353ed42f3524`
+  - commit delivered: `3ed0a9ba50b35f2c2b6b35748d98ed1c208eeb3b`
+- Expected user behavior now:
+  - choosing `Sistem`, `Gelap`, or `Terang` changes the app theme immediately
+  - pressing `Simpan Pengaturan` is no longer required for display theme changes alone
+  - the save button still applies notification, polling, DND, and monitored-course changes
