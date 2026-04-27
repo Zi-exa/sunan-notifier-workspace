@@ -1723,6 +1723,32 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Polish Microcopy for Login, Update, and Empty States - 2026-04-27)
+
+- [x] 1. Audit mikrocopy di login, update flow, dan empty state tab utama; tulis plan di `tasks/todo.md`
+- [x] 2. Rapikan copy agar lebih seragam, sederhana, dan konsisten antar layar tanpa ubah alur fungsi
+- [x] 3. Verifikasi, dokumentasikan hasil/lesson, lalu commit dan push
+
+## Review Addendum (Polish Microcopy for Login, Update, and Empty States - 2026-04-27)
+
+- Fokus audit lanjutan:
+  - loading dan empty state di `Tugas`, `Dashboard`, `Kalender`, `Absensi`, dan `Detail Tugas`
+  - loading default shared di `components/app/LoadingView.tsx` dan `components/Redesign/LoadingView.tsx`
+- Pola copy yang diseragamkan:
+  - loading: `Memuat...` / `Menyiapkan...`
+  - error state: `... belum bisa ditampilkan`
+  - empty state: `Belum ada...`
+  - penjelasan: singkat, langsung, tanpa istilah internal
+- Contoh hasil:
+  - `Memuat data SUNAN...` -> `Memuat data...`
+  - `Daftar tugas belum tersedia` -> `Tugas belum bisa ditampilkan`
+  - `Menyelaraskan status tugas...` -> `Menyiapkan tugas...`
+  - `Tidak ada deadline` -> `Belum ada deadline`
+  - `Tidak ada deskripsi tambahan dari dosen.` -> `Belum ada deskripsi tambahan.`
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
   - `npx expo config --json`
 
 ## Plan (Complete Manual APK Update Setup Docs - 2026-04-27)
