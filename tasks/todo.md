@@ -2320,3 +2320,33 @@ Tanggal: 2026-04-20
   - when the alert appears, tap outside it
   - open `Pengaturan > About`
   - use `Buka Lagi` to reopen the deferred update instead of seeing a misleading “sudah terbaru” result
+
+## Plan (Unify Update Action And Show Post-Update Log - 2026-04-28)
+
+- [x] 1. Audit the current popup and Settings update entry points, then simplify the UX so only one action remains primary for applying an update
+- [x] 2. Persist enough update metadata across reload so the app can show a clear post-update log after the new version is applied
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then publish one fresh `production` EAS update for retest
+
+## Review Addendum (Unify Update Action And Show Post-Update Log - 2026-04-28)
+
+- Root cause:
+  - `Pengaturan > About > Update aplikasi` still exposed a direct `Update Sekarang` button even though the popup dialog already owned the actual apply action
+  - the app also had no persisted handoff for showing any update log after `expo-updates` reloaded into the new bundle
+- Fix:
+  - simplified the Settings card to a single button:
+    - `Cek Update` when nothing is pending
+    - `Lihat Update` when an update is already available, which reopens the same popup dialog
+  - kept `Update sekarang` only inside the popup dialog so there is one consistent apply path
+  - added a persisted app-update store handoff so the app can queue a post-update notice before reload/install and show it once after the new version is actually running
+  - reused remote APK `notes` when available and extracted any update note-like strings from EAS manifests when possible; otherwise the post-update dialog falls back to a simple success log
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Sederhanakan aksi update dan tampilkan log sesudah update`
+  - update group: `c8098acd-044c-4a40-b796-8ef9da84f9f3`
+- Expected user behavior now:
+  - the Settings card no longer duplicates `Update sekarang`
+  - after an update is applied and the app reopens, a success dialog shows the update log once
+  - if the popup is dismissed, `Pengaturan > About > Update aplikasi` only reopens the same update dialog instead of offering a second `Update sekarang` button
