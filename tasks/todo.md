@@ -2033,6 +2033,11 @@ Tanggal: 2026-04-20
 - Verification:
   - `npm run typecheck`
   - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Kecilkan ukuran card tugas dan absensi`
+  - update group: `87da74de-8af3-47f4-b9d0-d3c8f0bd7989`
+  - commit delivered: `edc88a6da0e644510b224b4cc7d57f75206fae17`
   - `npm run start:tunnel:clear` now starts Expo successfully on this machine
 
 ## Plan (Restore QR Output In Expo Start Wrapper - 2026-04-27)
@@ -2553,3 +2558,22 @@ Tanggal: 2026-04-20
 - Expected user behavior now:
   - task and attendance cards should read closer to the provided mockup
   - functions stay the same: task cards still open detail, attendance cards still open SUNAN when the quick-link tile is pressed, and status badges still reflect the same logic
+
+## Plan (Reduce Card Scale Back To Normal - 2026-04-28)
+
+- [x] 1. Keep the new shared structure, but tune oversized proportions down across the card shell, icon bubbles, badges, titles, and info tiles
+- [x] 2. Preserve all actions and the same shared visual language between `Tugas` and `Absensi`
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then commit the proportion tuning
+
+## Review Addendum (Reduce Card Scale Back To Normal - 2026-04-28)
+
+- Root cause:
+  - the reference-layout pass kept the right structure, but the title scale, header bubbles, badges, and bottom tiles were still sized like a showcase mockup instead of a normal mobile list card
+  - because all of those large proportions stacked together, the cards felt heavy even though the information hierarchy itself was correct
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` and `mobile/components/Redesign/AttendanceCard.tsx` now use a slimmer shell: thinner accent strip, tighter padding, smaller title, tighter badge spacing, and lighter top-row copy sizing
+  - `mobile/components/Redesign/CardInfoTile.tsx` shrinks the shared icon bubbles and bottom tiles so the supporting info still matches the new visual language without dominating the card
+  - `mobile/components/Redesign/Badge.tsx` trims badge padding, dot size, and text size so status pills stay readable but no longer feel oversized
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
