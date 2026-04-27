@@ -1991,3 +1991,25 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Replace Native Tabs Header And Guard Expo Keep Awake - 2026-04-27)
+
+- [x] 1. Replace the unstable native `(tabs)` stack header with a shared in-screen header that uses safe-area insets directly
+- [x] 2. Guard Expo Go development runtime from the `expo-keep-awake` activation error with a local no-op shim
+- [x] 3. Verify with typecheck/lint, document the result, then commit and push
+
+## Review Addendum (Replace Native Tabs Header And Guard Expo Keep Awake - 2026-04-27)
+
+- Root cause update:
+  - the previous native-stack header tweak did not solve the overlap on the real device, so the unstable piece was the native `(tabs)` header itself under Android edge-to-edge
+  - Expo Go also surfaced a separate runtime problem: Expo's dev wrapper tried to call `expo-keep-awake`, which failed on this device before the app could be used normally
+- Perbaikan:
+  - root stack header untuk `(tabs)` dimatikan, lalu setiap tab utama sekarang memakai header custom shared yang membaca safe-area inset langsung dari `react-native-safe-area-context`
+  - header baru dipasang di `Dashboard`, `Tugas`, `Absensi`, `Kalender`, dan `Pengaturan`, jadi posisi judul tidak lagi bergantung pada perhitungan inset native-stack
+  - Metro sekarang mengarahkan import `expo-keep-awake` ke shim no-op lokal agar Expo Go tidak lagi memunculkan error `Unable to activate keep awake`
+- Dampak:
+  - header tab utama harus tampil di bawah status bar secara konsisten, termasuk di Expo Go
+  - error dev runtime `keep awake` tidak lagi memblok app saat dibuka untuk testing
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
