@@ -2526,3 +2526,30 @@ Tanggal: 2026-04-20
 - Expected user behavior now:
   - task and attendance cards still keep the same navigation, quick links, and status logic
   - the cards should feel less text-heavy because secondary details are grouped into short chips instead of several full rows
+
+## Plan (Match Task And Attendance Cards To Reference Layout - 2026-04-28)
+
+- [x] 1. Rework the active redesign cards so `Tugas` and `Absensi` share the same high-level structure as the provided reference: icon/course header, large title, compact status pills, divider, and bottom info tiles
+- [x] 2. Preserve existing behavior: task cards still open detail on press, attendance cards still expose SUNAN quick links and current status/mark information
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then record the review and ship the JS-only visual update
+
+## Review Addendum (Match Task And Attendance Cards To Reference Layout - 2026-04-28)
+
+- Root cause:
+  - the previous simplification reduced text, but it still kept the old stacked-row composition
+  - compared to the visual reference, `Tugas` and `Absensi` still lacked a strong hierarchy: icon-led header, bigger title treatment, clearer status pills, and bottom tiles that group supporting information intentionally
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` was rebuilt around the reference layout: icon/course header, top-right detail cue, larger title, dotted status pills, divider, and bottom tiles for type/open/deadline
+  - `mobile/components/Redesign/AttendanceCard.tsx` now follows the same visual language, using the same tile grammar for SUNAN quick link and start/close times while preserving mark/status badges
+  - `mobile/components/Redesign/CardInfoTile.tsx` was added as a shared tile primitive, and `mobile/components/Redesign/Badge.tsx` now supports optional dots so both cards stay consistent
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Card tugas dan absensi gaya baru`
+  - update group: `365e58a8-e14e-4d26-b030-2bfd6e31bb3d`
+  - commit delivered: `4c12dd53014f1871602459dd49a2596b100dead8`
+- Expected user behavior now:
+  - task and attendance cards should read closer to the provided mockup
+  - functions stay the same: task cards still open detail, attendance cards still open SUNAN when the quick-link tile is pressed, and status badges still reflect the same logic
