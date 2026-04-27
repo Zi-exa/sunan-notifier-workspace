@@ -1678,6 +1678,27 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Simplify User-Facing Save Messages - 2026-04-27)
+
+- [x] 1. Audit copy user-facing di alur simpan pengaturan dan tandai kalimat yang terlalu teknis
+- [x] 2. Sederhanakan pesan menjadi bahasa yang mudah dipahami tanpa istilah server/sinkronisasi
+- [x] 3. Verifikasi, dokumentasikan hasil, lalu commit dan push
+
+## Review Addendum (Simplify User-Facing Save Messages - 2026-04-27)
+
+- Copy di alur simpan pengaturan sekarang tidak lagi menampilkan istilah teknis seperti `server`, `sinkron`, `perangkat`, atau status parsial yang membingungkan user.
+- Semua jalur save yang sebelumnya memunculkan:
+  - `Tersimpan di perangkat`
+  - `Tersimpan sebagian di server`
+  - penjelasan sinkronisasi teknis
+  sekarang dipadatkan menjadi satu hasil yang mudah dipahami:
+  - `Tersimpan`
+  - `Pengaturan berhasil disimpan.`
+- Penjelasan bantuan `Mata Kuliah Dipantau` juga disederhanakan agar lebih mudah dimengerti user non-teknis.
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
   - `npx expo config --json`
 
 ## Plan (Complete Manual APK Update Setup Docs - 2026-04-27)
