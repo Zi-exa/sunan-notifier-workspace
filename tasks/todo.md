@@ -2050,3 +2050,22 @@ Tanggal: 2026-04-20
   - run pertama sekarang memakai `stdout: inherit` dan hanya menangkap `stderr` saat mode tunnel
   - dengan itu Expo tetap bisa merender QR/prompt di terminal, sementara wrapper masih bisa mendeteksi crash Ngrok dari `stderr`
   - bila tunnel gagal, run kedua `--lan` memakai `stdio: inherit` penuh agar proses fallback sepenuhnya interaktif
+
+## Plan (Publish Production EAS Update For User-Facing Fixes - 2026-04-27)
+
+- [x] 1. Verify the current runtime/channel assumptions so the published update targets installed `1.0.1` users safely
+- [x] 2. Publish an EAS Update on the `production` branch for the recent user-facing JS/UI fixes
+- [x] 3. Record the release result in task notes, then report the publish details back to the user
+
+## Review Addendum (Publish Production EAS Update For User-Facing Fixes - 2026-04-27)
+
+- Channel/runtime audit confirmed the installed public app is still on runtime `1.0.1`, so the recent JS/UI fixes are safe to ship through `EAS Update` without a new APK.
+- Published to branch `production` with message:
+  - `Perbaikan absensi, header tab, dan stabilitas UI`
+- Publish result:
+  - update group ID: `2a8bce0f-9bdd-4830-9698-135b4645c08e`
+  - Android update ID: `019dcfc8-dc65-76c9-bafe-edd9d535bbe2`
+  - iOS update ID: `019dcfc8-dc65-7792-837f-4665d5fd64bd`
+  - dashboard: `https://expo.dev/accounts/azhurel/projects/sunan-notifier/updates/2a8bce0f-9bdd-4830-9698-135b4645c08e`
+- User effect:
+  - installed `1.0.1` users should receive the in-app EAS update prompt on next app launch when online, as long as the manual APK checker does not override it with a newer binary update first.
