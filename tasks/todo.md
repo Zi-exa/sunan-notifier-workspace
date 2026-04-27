@@ -2292,3 +2292,31 @@ Tanggal: 2026-04-20
   - fully close the app
   - open it again while online
   - a new update prompt should now appear because there is definitely a newer group than the one already applied before this step
+
+## Plan (Remove Misleading Recheck On Deferred Update - 2026-04-28)
+
+- [x] 1. Change the Settings update action so a deferred update reopens the existing prompt instead of checking the server again
+- [x] 2. Simplify the label/copy so user is not told the app is already current while a deferred update is still ready
+- [x] 3. Verify with typecheck/lint, publish a fresh production EAS update, and document the retest path
+
+## Review Addendum (Remove Misleading Recheck On Deferred Update - 2026-04-28)
+
+- Root cause:
+  - when `availableUpdate` already existed, the secondary Settings action still performed a fresh server check
+  - that could return “already current” even though a deferred update was still ready locally
+- Fix:
+  - `mobile/app/(tabs)/settings.tsx` now short-circuits `handleCheckUpdate()` to reopen the existing prompt when `availableUpdate` is present
+  - the secondary action label changes from `Cek Lagi` to `Buka Lagi`
+  - copy now says the update can be continued anytime from that card
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+  - published a final clean production EAS update for the UX fix:
+    - message: `Buka lagi update yang ditunda`
+    - group: `e850b1ac-233f-4577-8af1-87b866572246`
+    - commit delivered: `eb1249402d504e3a1c979bb7583b2b10d18473c7`
+- User retest path:
+  - update to the newest prompt once
+  - when the alert appears, tap outside it
+  - open `Pengaturan > About`
+  - use `Buka Lagi` to reopen the deferred update instead of seeing a misleading “sudah terbaru” result
