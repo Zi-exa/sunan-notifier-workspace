@@ -2350,3 +2350,29 @@ Tanggal: 2026-04-20
   - the Settings card no longer duplicates `Update sekarang`
   - after an update is applied and the app reopens, a success dialog shows the update log once
   - if the popup is dismissed, `Pengaturan > About > Update aplikasi` only reopens the same update dialog instead of offering a second `Update sekarang` button
+
+## Plan (Fix Missing Post-Update Log - 2026-04-28)
+
+- [x] 1. Audit why the queued post-update notice does not appear after a real update reload
+- [x] 2. Replace the fragile target-ID-only match with a more reliable “app has moved to a newer runtime/update than before” check
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then publish one fresh `production` EAS update for retest
+
+## Review Addendum (Fix Missing Post-Update Log - 2026-04-28)
+
+- Root cause:
+  - the previous post-update dialog only reappeared when the app could match the next running bundle to a very specific `targetUpdateId` or `targetCreatedAt`
+  - on real devices that metadata is not always populated in time, so the notice stayed queued but never became visible after reload
+- Fix:
+  - the app now stores the version/update identity that was running before the user pressed update
+  - for EAS updates, the post-update log becomes eligible as soon as the running `updateId` or `createdAt` differs from the one before reload
+  - for APK updates, the post-update log becomes eligible as soon as the running app version changes from the one before the installer was opened
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Perbaiki log setelah update dipasang`
+  - update group: `8182235e-37a3-439b-ae48-33d347194441`
+- Expected user behavior now:
+  - after the user presses `Update sekarang`, the app reloads into the new update
+  - once the new update is actually running, the success dialog with `Catatan update` should appear once
