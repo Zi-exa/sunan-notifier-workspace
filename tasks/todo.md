@@ -2013,3 +2013,24 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Fix Metro Start After Keep Awake Shim - 2026-04-27)
+
+- [x] 1. Reproduce the `npm run start:tunnel:clear` crash and inspect whether the new Metro resolver shim is the source
+- [x] 2. Add a safe Expo start fallback so the tunnel command recovers to LAN when Ngrok fails with the known `body` crash
+- [x] 3. Verify Metro startup, document the regression and fix, then commit and push
+
+## Review Addendum (Fix Metro Start After Keep Awake Shim - 2026-04-27)
+
+- Audit showed the `Cannot read properties of undefined (reading 'body')` crash was specific to `expo start --tunnel`, not the app bundle itself:
+  - `expo start --lan -c` booted Metro normally
+  - the user-facing problem was that the existing tunnel command had no recovery path when Expo/Ngrok failed
+- Perbaikan:
+  - `mobile/scripts/start-expo.js` now runs the local Expo CLI directly through `node <expo-cli> start ...`
+  - this avoids unstable `npx.cmd` spawning from a Node wrapper on Windows
+  - `start:tunnel` and `start:tunnel:clear` in `mobile/package.json` now go through that wrapper
+  - if tunnel startup hits the known Ngrok `body` crash, the wrapper automatically retries with `--lan`
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npm run start:tunnel:clear` now starts Expo successfully on this machine
