@@ -1858,3 +1858,25 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Polish Remaining Status and Modal Copy - 2026-04-27)
+
+- [x] 1. Audit sisa copy user-facing di status tugas, filter, legend kalender, dan modal tambahan yang masih memakai istilah teknis
+- [x] 2. Sederhanakan istilah tersebut tanpa mengubah alur atau fungsi aplikasi
+- [x] 3. Verifikasi, dokumentasikan hasil, lalu commit dan push
+
+## Review Addendum (Polish Remaining Status and Modal Copy - 2026-04-27)
+
+- Audit lanjutan menemukan istilah teknis yang masih lolos di area yang sering dilihat user:
+  - status dan filter tugas seperti `Sudah Submit` dan `Belum Terverifikasi`
+  - istilah campuran seperti `Quiz`, `Pending`, dan `Submit`
+  - modal lama yang masih menampilkan daftar sprint internal
+- Perubahan utama yang saya rapikan:
+  - status/filter tugas sekarang memakai bahasa yang lebih sederhana seperti `Sudah Dikumpulkan` dan `Masih Dicek`
+  - istilah `Quiz` saya seragamkan menjadi `Kuis`
+  - legend kalender sekarang full Bahasa Indonesia
+  - hero dashboard dipendekkan agar lebih natural
+  - modal tambahan sekarang menampilkan ringkasan fungsi aplikasi, bukan milestone pengembangan internal
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
