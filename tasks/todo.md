@@ -2252,9 +2252,10 @@ Tanggal: 2026-04-20
 - Verification:
   - `npm run typecheck`
   - `npm run lint`
-  - published a fresh production EAS update:
-    - message: `Perbaiki update yang ditunda`
-    - group: `ff317ae5-c348-40cf-8a74-4b7a84bbd39d`
+  - published production EAS updates for the fix, then finalized from a clean commit:
+    - final message: `Perbaiki lanjutkan update yang ditunda`
+    - final group: `366ac2a1-e1ee-4007-ad3c-c5184c8eab93`
+    - final commit delivered: `97fa429d83a6a77662c5675c4bb843a25bb3bb40`
   - `npx eas branch:view production --json` confirms that group is now the newest production update
 - Exact user retest path:
   - fully close the app
