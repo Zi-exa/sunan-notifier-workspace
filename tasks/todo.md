@@ -1699,6 +1699,30 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Audit User-Facing Copy Across App - 2026-04-27)
+
+- [x] 1. Audit dialog, error state, loading state, dan pesan penting lain yang masih memakai istilah teknis
+- [x] 2. Sederhanakan copy menjadi bahasa yang lebih mudah dipahami user awam tanpa mengubah alur aplikasi
+- [x] 3. Verifikasi, dokumentasikan hasil, lalu commit dan push
+
+## Review Addendum (Audit User-Facing Copy Across App - 2026-04-27)
+
+- Audit lanjutan difokuskan ke sumber copy yang paling sering muncul ke user:
+  - error umum di `mobile/lib/moodle/errors.ts`
+  - dialog update di `mobile/components/app/AppUpdateCoordinator.tsx`
+  - pesan login/maintenance di `mobile/app/login.tsx`
+  - loading dan empty state riwayat absensi di `mobile/app/(tabs)/attendance.tsx`
+  - pesan sesi berakhir di `mobile/lib/stores/authStore.ts`
+- Istilah teknis yang diringkas mencakup:
+  - `maintenance` -> `sedang diperbarui`
+  - `kredensial` -> `NIM, password, dan koneksi internet`
+  - `sesi berakhir` -> `silakan login lagi`
+  - `APK` / `memuat ulang aplikasi` -> kalimat update yang lebih sederhana
+  - `terdeteksi di aplikasi` -> `waktunya sudah lewat`
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
   - `npx expo config --json`
 
 ## Plan (Complete Manual APK Update Setup Docs - 2026-04-27)
