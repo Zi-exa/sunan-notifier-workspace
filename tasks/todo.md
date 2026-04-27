@@ -2376,3 +2376,21 @@ Tanggal: 2026-04-20
 - Expected user behavior now:
   - after the user presses `Update sekarang`, the app reloads into the new update
   - once the new update is actually running, the success dialog with `Catatan update` should appear once
+
+## Plan (Publish Fresh Update Log Retest Build - 2026-04-28)
+
+- [x] 1. Publish one newer `production` EAS update from the current clean mobile commit so the device has a fresh update to install
+- [x] 2. Record the resulting update group for the retest path and keep repository history in sync
+
+## Review Addendum (Publish Fresh Update Log Retest Build - 2026-04-28)
+
+- Published release:
+  - branch: `production`
+  - message: `Tes log update sesudah apply`
+  - update group: `7dc41081-e918-4374-a0ce-47ca7a422373`
+  - commit delivered: `57a135c113d265224b41677d43ed74cacd5d10a5`
+- Exact retest path:
+  - close the app fully
+  - open it again while online
+  - when the new update prompt appears, press `Update sekarang`
+  - after the app reloads, the `Update selesai` dialog with `Catatan update` should appear once
