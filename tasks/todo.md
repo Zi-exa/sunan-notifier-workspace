@@ -1902,3 +1902,26 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Add Attendance Web Report Fallback - 2026-04-27)
+
+- [x] 1. Audit jalur autentikasi dan halaman attendance report SUNAN untuk menemukan fallback yang aman saat web service attendance tidak bisa diakses mahasiswa
+- [x] 2. Implementasikan fallback best-effort yang mencoba membaca status hadir user dari halaman web SUNAN tanpa merusak flow absensi utama
+- [x] 3. Verifikasi, dokumentasikan hasil, lalu commit dan push
+
+## Review Addendum (Add Attendance Web Report Fallback - 2026-04-27)
+
+- Audit plugin attendance Moodle menunjukkan `mod_attendance_get_session(s)` memang membawa `attendance_log` lengkap, tetapi capability-nya diarahkan ke dosen/pengambil absensi, jadi role mahasiswa sangat mungkin ditolak oleh SUNAN.
+- Screenshot user membuktikan laporan kehadiran sendiri tetap tersedia lewat halaman web `mod/attendance/view.php?id=<cmid>`, jadi fallback yang paling aman adalah membaca laporan web itu, bukan menebak dari event kalender.
+- Perubahan utama di mobile:
+  - `client.ts` sekarang mencoba jalur attendance API lebih dulu seperti sebelumnya
+  - jika masih ada sesi yang belum bisa ditandai dan `quickLink` attendance tersedia, app membaca kredensial SUNAN tersimpan, membangun sesi web, lalu mengambil halaman `view.php?id=<cmid>&view=5`
+  - tabel laporan absensi dari HTML itu diparse untuk mengambil waktu sesi + status seperti `Present`, `Late`, `Absent`, `Excused`
+  - hasilnya dipetakan ke badge yang lebih spesifik seperti `Hadir`, `Terlambat`, `Izin`, atau `Tidak Hadir`
+- UI card absensi sekarang mendukung label mark yang lebih informatif, jadi jalur API dan jalur web fallback sama-sama masuk ke badge yang konsisten.
+- Fallback aman:
+  - kalau login web gagal, HTML SUNAN berubah, atau halaman report tidak bisa dibaca, daftar absensi utama tetap berjalan normal
+  - app tidak mengubah flow absensi user dan tidak mencoba submit apa pun ke SUNAN
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
