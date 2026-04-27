@@ -2148,3 +2148,28 @@ Tanggal: 2026-04-20
 - Known non-test paths:
   - Expo Go tetap tidak akan menampilkan prompt EAS
   - APK lama yang dibuild sebelum fix ini tetap tidak akan bisa menerima update EAS
+
+## Plan (Fix Missing EAS Channel Mapping - 2026-04-28)
+
+- [x] 1. Verify whether the `production` EAS channel actually exists and points to the `production` branch used by the APK header
+- [x] 2. Create or repair the channel mapping, then republish a production update if needed
+- [x] 3. Document the root cause and final user test steps, then commit and push the notes
+
+## Review Addendum (Fix Missing EAS Channel Mapping - 2026-04-28)
+
+- Final root cause:
+  - the APK was already corrected to request channel `production`
+  - the update content was already published on branch `production`
+  - but EAS had no channel objects at all, so `expo-channel-name=production` had nothing to resolve to on the server
+- Verification:
+  - `npx eas channel:list --json` returned an empty list before the fix
+  - `npx eas branch:view production --json` showed the expected update groups on the branch, including `4e66c8d0-89f9-488a-848f-5adf922bc129`
+- Fix:
+  - created channel `production`
+  - EAS mapped it to branch `production` immediately
+  - `npx eas channel:view production --json` now shows the channel and both published update groups for runtime `1.0.1`
+- Final user test path:
+  - use the fresh APK built after the `expo-updates` fix
+  - fully close the app
+  - open it again while online
+  - the manual APK manifest still stays silent on `1.0.1`, then EAS should resolve channel `production` and show the in-app update prompt
