@@ -1925,3 +1925,25 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Propagate Attendance Labels To History Filter - 2026-04-27)
+
+- [x] 1. Audit filter absensi dan history store untuk menemukan kenapa label kehadiran tidak ikut muncul konsisten di `Semua` dan `Riwayat`
+- [x] 2. Pindahkan enrichment status ke layer gabungan query + history agar session lama juga ikut ter-update dari report web
+- [x] 3. Verifikasi, dokumentasikan hasil, lalu commit
+
+## Review Addendum (Propagate Attendance Labels To History Filter - 2026-04-27)
+
+- Akar masalahnya bukan di filter `Riwayat` sendiri, tetapi di titik enrichment:
+  - fallback web report sebelumnya hanya dijalankan untuk sesi yang ikut query bulan aktif
+  - item `Riwayat` banyak berasal dari `attendanceHistoryStore`, jadi sesi lama tidak ikut disentuh lagi oleh fallback itu
+- Perbaikan:
+  - `getAttendanceSessions()` sekarang fokus mengembalikan sesi hasil API + kalender
+  - helper baru `hydrateAttendanceMarksFromWebReports()` dipindah ke layer yang bisa menerima daftar sesi gabungan
+  - `useAttendanceSessionsQuery()` sekarang menjalankan enrichment web report setelah sesi baru digabung dengan history user
+- Dampak perilaku:
+  - badge status dari halaman report seperti `Hadir`, `Terlambat`, `Izin`, atau `Tidak Hadir` sekarang seharusnya bisa muncul di `Semua` maupun `Riwayat`
+  - selama session attendance lama itu masih tersimpan di history app dan report web SUNAN masih membawanya
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
