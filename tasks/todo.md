@@ -2419,6 +2419,27 @@ Tanggal: 2026-04-20
 
 ## Plan (Strengthen Update Effect Idempotency - 2026-04-28)
 
-- [ ] 1. Add ref-based idempotency guards so pending-update and post-update-notice effects only write to the store once per logical event
-- [ ] 2. Verify with `npm run typecheck` and `npm run lint`
+- [x] 1. Add ref-based idempotency guards so pending-update and post-update-notice effects only write to the store once per logical event
+- [x] 2. Verify with `npm run typecheck` and `npm run lint`
 - [ ] 3. Publish a follow-up production hotfix and provide a fallback recovery path if the device is still pinned to a crashy cached update
+
+## Review Addendum (Strengthen Update Effect Idempotency - 2026-04-28)
+
+- Root cause:
+  - the first hotfix still relied too much on effect-level equality checks inside `AppUpdateCoordinator`
+  - on real devices, `expo-updates` can surface fresh manifest/object references while `isUpdatePending` stays true, so the coordinator still had a path to call `setAvailableUpdate()` repeatedly
+  - because the app-update store always accepted the write, one logical pending update could still fan out into repeated global state writes and hit `Maximum update depth exceeded`
+- Fix:
+  - `mobile/components/app/AppUpdateCoordinator.tsx` now mirrors a pending EAS update into the store only once per pending session using a simple ref gate instead of recalculating and rewriting on every render
+  - `mobile/lib/stores/appUpdateStore.ts` now treats identical `availableUpdate` writes as no-ops, so repeated callers cannot trigger a rerender loop by writing equivalent update payloads back into Zustand
+  - `showDialog`, `hideDialog`, and `clearAvailableUpdate` were also hardened to skip redundant state writes
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Hotfix stop update store loop`
+  - update group: `dda73812-95a8-4f9e-b725-b1f6bbc4422d`
+  - commit delivered: `e2645885b90ff427d593c2a0b0e0310e270b9571`
+- Recovery path:
+  - if the device is already pinned to the crashy cached JS bundle and cannot reach the fresh prompt safely, reinstall the current APK build once to reset the cached bundle, then reopen online so the hotfix can be fetched cleanly
