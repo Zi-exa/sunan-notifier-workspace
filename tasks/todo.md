@@ -1971,3 +1971,23 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Fix Tabs Header Safe Area Collision - 2026-04-27)
+
+- [x] 1. Audit stack header and edge-to-edge configuration to find why the tabs header ignores the Android top inset
+- [x] 2. Apply the minimal native-stack safe-area fix so the tabs header always sits below the device status bar
+- [x] 3. Verify with typecheck/lint, document the result, then commit and push
+
+## Review Addendum (Fix Tabs Header Safe Area Collision - 2026-04-27)
+
+- Akar masalahnya ada di kombinasi `android.edgeToEdgeEnabled=true` dan header native stack root:
+  - di device tertentu, header tabs bisa dirender seolah status bar tidak translucent
+  - akibatnya judul seperti `Absensi` terlihat masuk ke area jam/sinyal HP
+- Perbaikan minimal:
+  - `mobile/app/_layout.tsx` sekarang memaksa `statusBarTranslucent: true` di `Stack.screenOptions`
+  - dengan itu native stack menghitung top inset header dengan benar untuk layar yang memakai header bawaan
+- Dampak:
+  - header tab utama seperti `Dashboard`, `Tugas`, `Absensi`, `Kalender`, dan `Settings` harus turun di bawah status bar pada device Android edge-to-edge
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
