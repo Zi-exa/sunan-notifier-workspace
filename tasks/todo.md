@@ -2117,3 +2117,34 @@ Tanggal: 2026-04-20
 - Final user condition:
   - Expo Go will still never show the EAS prompt
   - a fresh production APK built after this fix should be able to receive the already-published EAS update group `2a8bce0f-9bdd-4830-9698-135b4645c08e`
+
+## Plan (Prepare Fresh APK And Publish EAS Update Test - 2026-04-28)
+
+- [x] 1. Verify the freshly built local APK is the post-fix binary that embeds `expo-updates` for runtime `1.0.1`
+- [x] 2. Publish a new production EAS update test so the corrected APK has a promptable update to fetch
+- [x] 3. Document the exact install/test path for the user, then commit and push the task notes
+
+## Review Addendum (Prepare Fresh APK And Publish EAS Update Test - 2026-04-28)
+
+- Baseline APK verification:
+  - fresh local release APK exists at `mobile/android/app/build/outputs/apk/release/app-release.apk`
+  - file size/time after rebuild: `80307673` bytes at `2026-04-28 00:03:43`
+  - generated Android manifest for that APK confirms:
+    - `expo.modules.updates.ENABLED=true`
+    - `expo.modules.updates.EXPO_RUNTIME_VERSION=@string/expo_runtime_version`
+    - `expo.modules.updates.UPDATES_CONFIGURATION_REQUEST_HEADERS_KEY={"expo-channel-name":"production"}`
+- Published a dedicated production EAS update test on top of the corrected binary:
+  - message: `Tes update in-app setelah perbaikan APK`
+  - update group ID: `4e66c8d0-89f9-488a-848f-5adf922bc129`
+  - Android update ID: `019dcfeb-ab78-7837-9cbe-f79427f1905f`
+  - iOS update ID: `019dcfeb-ab78-7484-9230-5ee0ee6e0ab1`
+  - dashboard: `https://expo.dev/accounts/azhurel/projects/sunan-notifier/updates/4e66c8d0-89f9-488a-848f-5adf922bc129`
+- Exact user test path:
+  - uninstall APK lama bila perlu
+  - install APK baru hasil build `2026-04-28 00:03:43`
+  - buka app saat online
+  - karena manifest APK manual masih di versi `1.0.1`, jalur APK updater akan diam lalu app lanjut mengecek EAS
+  - jika `expo-updates` sudah aktif benar di binary, dialog `Versi baru siap dipakai` harus muncul
+- Known non-test paths:
+  - Expo Go tetap tidak akan menampilkan prompt EAS
+  - APK lama yang dibuild sebelum fix ini tetap tidak akan bisa menerima update EAS
