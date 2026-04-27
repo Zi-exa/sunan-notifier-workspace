@@ -2034,3 +2034,19 @@ Tanggal: 2026-04-20
   - `npm run typecheck`
   - `npm run lint`
   - `npm run start:tunnel:clear` now starts Expo successfully on this machine
+
+## Plan (Restore QR Output In Expo Start Wrapper - 2026-04-27)
+
+- [x] 1. Adjust the Expo start wrapper so the first run still detects tunnel failure without hiding Expo's interactive QR output
+- [x] 2. Keep the tunnel-to-LAN fallback, but let the fallback LAN process own the terminal fully so QR and prompts render normally
+- [ ] 3. Verify the wrapper script syntax/behavior, document the regression, then commit and push
+
+## Review Addendum (Restore QR Output In Expo Start Wrapper - 2026-04-27)
+
+- Akar regresinya ada di stdio wrapper:
+  - wrapper sebelumnya mem-pipe `stdout` Expo ke process Node sendiri
+  - Expo lalu tidak melihat terminal sebagai TTY interaktif, sehingga QR dan UI interaktif tidak muncul walau Metro sebenarnya hidup
+- Perbaikan:
+  - run pertama sekarang memakai `stdout: inherit` dan hanya menangkap `stderr` saat mode tunnel
+  - dengan itu Expo tetap bisa merender QR/prompt di terminal, sementara wrapper masih bisa mendeteksi crash Ngrok dari `stderr`
+  - bila tunnel gagal, run kedua `--lan` memakai `stdio: inherit` penuh agar proses fallback sepenuhnya interaktif
