@@ -2173,3 +2173,29 @@ Tanggal: 2026-04-20
   - fully close the app
   - open it again while online
   - the manual APK manifest still stays silent on `1.0.1`, then EAS should resolve channel `production` and show the in-app update prompt
+
+## Plan (Add Manual Update Action In Settings - 2026-04-28)
+
+- [x] 1. Audit the existing auto-update coordinator and decide the smallest reusable abstraction for manual checks from Settings
+- [x] 2. Implement a shared update-check flow that can either show the existing update prompt or report that the app is already up to date
+- [x] 3. Add clear `Cek Update` / `Update Sekarang` actions in `mobile/app/(tabs)/settings.tsx` without exposing technical jargon
+- [x] 4. Verify with `npm run typecheck` and `npm run lint`, then document the result and commit both repos
+
+## Review Addendum (Add Manual Update Action In Settings - 2026-04-28)
+
+- Root cause addressed:
+  - after the user pressed `Nanti`, the update prompt only lived in the startup coordinator and had no manual re-entry point in the app
+- Fix applied:
+  - extracted a shared app-update check/apply path in `mobile/lib/updates/index.ts`
+  - added a lightweight in-memory update store in `mobile/lib/stores/appUpdateStore.ts` so the prompt can stay available for the current session after being dismissed
+  - refactored `mobile/components/app/AppUpdateCoordinator.tsx` to use that shared store instead of a private dialog state
+  - added an `Update aplikasi` block in `mobile/app/(tabs)/settings.tsx` with:
+    - `Cek Update` when nothing is pending
+    - `Update Sekarang` plus `Cek Lagi` when an update is already available
+    - simple fallback dialogs for `sudah terbaru` and `belum bisa cek update`
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Expected user behavior now:
+  - if the startup prompt is dismissed with `Nanti`, the user can reopen the same update path from `Pengaturan > About > Update aplikasi`
+  - if no update is pending, `Cek Update` reports whether the app is already current
