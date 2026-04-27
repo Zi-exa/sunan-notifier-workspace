@@ -2443,3 +2443,31 @@ Tanggal: 2026-04-20
   - commit delivered: `e2645885b90ff427d593c2a0b0e0310e270b9571`
 - Recovery path:
   - if the device is already pinned to the crashy cached JS bundle and cannot reach the fresh prompt safely, reinstall the current APK build once to reset the cached bundle, then reopen online so the hotfix can be fetched cleanly
+
+## Plan (Persist Deferred Update Prompt - 2026-04-28)
+
+- [x] 1. Persist a deferred update payload so dismissing the popup does not lose the reopen path in `Pengaturan`
+- [x] 2. Make both the popup and Settings read the same effective update source instead of relying only on transient in-memory `availableUpdate`
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then publish one fresh `production` EAS update for retest
+
+## Review Addendum (Persist Deferred Update Prompt - 2026-04-28)
+
+- Root cause:
+  - dismissing the update popup only hid the dialog; the reopen path still depended on volatile `availableUpdate` in memory
+  - when that transient field was gone, `Pengaturan` fell back to a fresh server check and could incorrectly say “Sudah terbaru” even though the same deferred update was still locally available
+- Fix:
+  - `mobile/lib/stores/appUpdateStore.ts` now persists a `deferredAvailableUpdate` payload alongside pending post-update notices
+  - `showDialog()` restores the deferred payload back into the active dialog state, and applying a finished update clears both active and deferred update entries
+  - `mobile/app/(tabs)/settings.tsx` now reads one effective update source (`availableUpdate ?? deferredAvailableUpdate`) so the About card consistently shows `Lihat Update` while a deferred update still exists
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Perbaiki lanjutkan update yang ditunda`
+  - update group: `0501e6f5-1f7b-4d97-ba97-7c2227e60f64`
+  - commit delivered: `92ce5eafbad6b28e304abe56bffcf8ba6be63f3a`
+- Expected retest path:
+  - when the update popup appears, tap outside the card instead of pressing `Update sekarang`
+  - open `Pengaturan > About > Update aplikasi`
+  - the card should still show `Lihat Update`, and pressing it should reopen the same deferred update prompt instead of saying the app is already current
