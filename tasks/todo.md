@@ -2416,3 +2416,9 @@ Tanggal: 2026-04-20
   - branch: `production`
   - message: `Hotfix loop update dialog`
   - update group: `27ada8ed-51a0-4db6-9fe8-66daaa692721`
+
+## Plan (Strengthen Update Effect Idempotency - 2026-04-28)
+
+- [ ] 1. Add ref-based idempotency guards so pending-update and post-update-notice effects only write to the store once per logical event
+- [ ] 2. Verify with `npm run typecheck` and `npm run lint`
+- [ ] 3. Publish a follow-up production hotfix and provide a fallback recovery path if the device is still pinned to a crashy cached update
