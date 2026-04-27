@@ -2199,3 +2199,33 @@ Tanggal: 2026-04-20
 - Expected user behavior now:
   - if the startup prompt is dismissed with `Nanti`, the user can reopen the same update path from `Pengaturan > About > Update aplikasi`
   - if no update is pending, `Cek Update` reports whether the app is already current
+
+## Plan (Publish Manual Update Entry Point To User Build - 2026-04-28)
+
+- [x] 1. Verify whether the new `Update aplikasi` UI exists in source and whether production EAS already contains that commit
+- [x] 2. If production is behind, publish a new EAS update on branch `production` and confirm the channel mapping still resolves correctly
+- [x] 3. Record the deployment correction and exact user retest path, then verify repo status remains clean
+
+## Review Addendum (Publish Manual Update Entry Point To User Build - 2026-04-28)
+
+- Root cause:
+  - the `Update aplikasi` block already existed in source at commit `3103dbd`
+  - production EAS branch/channel still served the older update tied to commit `1ebce2a`
+  - the user's APK therefore never downloaded the Settings UI that exposes `Cek Update`
+- Verification before publishing:
+  - `settings.tsx` contains `Update aplikasi`, `Update Sekarang`, and `Cek Update`
+  - `git rev-parse HEAD` in `mobile` resolved to `3103dbdfa4387b48383208698c49e7a4f02d866c`
+  - `npx eas branch:view production --json` showed the latest production group was still `4e66c8d0-89f9-488a-848f-5adf922bc129` from commit `1ebce2a`
+- Fix:
+  - published a fresh EAS update to branch `production`
+  - message: `Tambah cek update manual di pengaturan`
+  - update group: `1e96742c-1e29-48e8-8e5e-6fb0fddd3115`
+  - commit delivered: `3103dbdfa4387b48383208698c49e7a4f02d866c`
+- Post-publish verification:
+  - `npx eas branch:view production --json` now shows `1e96742c-1e29-48e8-8e5e-6fb0fddd3115` as the newest group
+  - `npx eas channel:view production --json` still maps channel `production` to branch `production`
+- Exact user retest path:
+  - fully close the app
+  - open it again while online
+  - let the EAS prompt appear and apply the update
+  - after reload, open `Pengaturan > About` to see the new `Update aplikasi` block
