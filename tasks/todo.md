@@ -1947,3 +1947,27 @@ Tanggal: 2026-04-20
 - Verifikasi lulus:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Build Attendance History From Web Report Rows - 2026-04-27)
+
+- [x] 1. Audit identity/merge rules untuk sesi absensi agar row laporan web bisa dipadankan dengan sesi kalender yang sama
+- [x] 2. Implementasikan pembentukan item `Riwayat` baru dari report web SUNAN bila sesi tidak pernah tertangkap saat upcoming/open
+- [x] 3. Verifikasi, dokumentasikan hasil, update lesson, lalu commit dan push
+
+## Review Addendum (Build Attendance History From Web Report Rows - 2026-04-27)
+
+- Akar gap yang tersisa ada di dua tempat:
+  - key merge/history masih mengutamakan `eventId`, jadi sesi sintetis dari report web dan sesi asli dari kalender bisa dianggap item berbeda
+  - fallback web report hanya memperkaya item yang sudah ada, belum membuat item riwayat baru untuk row report yang tidak punya pasangan dari source absensi utama
+- Perbaikan:
+  - key sesi absensi sekarang berbasis `quickLink + startsAt` bila tersedia, lalu fallback ke `attendanceInstanceId + startsAt`; baru setelah itu `eventId`
+  - aturan key yang sama dipakai di merge absensi utama dan history store, jadi sesi sintetis dan sesi asli dengan waktu yang sama bisa bertemu di item yang sama
+  - fallback report web sekarang bukan cuma memberi badge, tetapi juga bisa membuat item history sintetis dari row laporan SUNAN yang belum pernah tertangkap saat upcoming/open
+- Dampak perilaku:
+  - sesi yang pagi tadi sudah muncul sebagai `Present/Hadir` di laporan SUNAN punya peluang masuk ke `Riwayat`, selama app masih punya satu exemplar module/quickLink untuk attendance tersebut
+  - `Semua` dan `Riwayat` sekarang sama-sama bisa menampilkan hasil report web, bukan hanya sesi query bulan aktif
+- Batas yang masih ada:
+  - jika sebuah module attendance sama sekali tidak pernah punya item yang berhasil masuk ke app, fallback ini belum punya anchor metadata untuk membangun item history-nya
+- Verifikasi lulus:
+  - `npm run typecheck`
+  - `npm run lint`
