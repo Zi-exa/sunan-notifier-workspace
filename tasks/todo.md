@@ -2229,3 +2229,36 @@ Tanggal: 2026-04-20
   - open it again while online
   - let the EAS prompt appear and apply the update
   - after reload, open `Pengaturan > About` to see the new `Update aplikasi` block
+
+## Plan (Keep Deferred EAS Update Reopenable - 2026-04-28)
+
+- [x] 1. Verify how `expo-updates` exposes downloaded-but-not-applied state and compare it with the current store logic
+- [x] 2. Sync the update coordinator/store with native pending update state so `Nanti` does not strand a downloaded EAS update
+- [x] 3. Re-verify Settings manual update behavior with typecheck/lint and document the correction
+
+## Review Addendum (Keep Deferred EAS Update Reopenable - 2026-04-28)
+
+- Root cause:
+  - the app only remembered `update available from the server`
+  - after an EAS update was fetched and the user pressed `Nanti`, there was no readback from native `expo-updates` state for `downloaded but not yet applied`
+  - because of that, the app could lose the `Update sekarang` entry point for a deferred EAS update
+- Verification of available API:
+  - `expo-updates` in this project exposes `useUpdates()` with `isUpdatePending` and `downloadedUpdate`
+  - `checkForUpdateAsync()` / `fetchUpdateAsync()` alone are not enough to rediscover a downloaded update after the prompt has been dismissed
+- Fix:
+  - `mobile/components/app/AppUpdateCoordinator.tsx` now reads `Updates.useUpdates()`
+  - when `isUpdatePending` becomes true, the shared update store is repopulated with `{ kind: 'eas' }`
+  - this keeps `Pengaturan > About > Update aplikasi` usable after the user presses `Nanti`
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+  - published a fresh production EAS update:
+    - message: `Perbaiki update yang ditunda`
+    - group: `ff317ae5-c348-40cf-8a74-4b7a84bbd39d`
+  - `npx eas branch:view production --json` confirms that group is now the newest production update
+- Exact user retest path:
+  - fully close the app
+  - open it again while online and let the new EAS update apply
+  - when the update prompt appears, press `Nanti`
+  - open `Pengaturan > About`
+  - `Update aplikasi` should still show the path to continue the update
