@@ -2035,9 +2035,9 @@ Tanggal: 2026-04-20
   - `npm run lint`
 - Published release:
   - branch: `production`
-  - message: `Buat tiga tile sejajar di card`
-  - update group: `d6853f29-7ae4-4277-a343-a9141d4dfb15`
-  - commit delivered: `694302d5070dc652436e45824a818e65535b7325`
+  - message: `Rapikan tulisan di tile card`
+  - update group: `7c206c68-656a-46f2-8c85-60798d2d9951`
+  - commit delivered: `439f441fe574ee187869777ee046ea343332336d`
 - Published release:
   - branch: `production`
   - message: `Kecilkan ukuran card tugas dan absensi`
@@ -2058,6 +2058,7 @@ Tanggal: 2026-04-20
 - Fix:
   - `mobile/components/Redesign/TaskCard.tsx` and `mobile/components/Redesign/AttendanceCard.tsx` now detect when they have three support tiles and force them into an explicit three-column layout instead of free wrapping
   - `mobile/components/Redesign/CardInfoTile.tsx` now supports a compact mode plus external layout styling, so the same tile component can stay readable even when each tile is only one-third of the card width
+  - task and attendance date/time values now switch to a shorter two-line format inside the three-column tiles, which keeps the meaning but removes the weekday/year clutter that made the text hard to read on phones
   - the attendance quick-link tile title was shortened to `Buka` so the three-column layout stays cleaner on mobile without changing the action itself
 - Verification:
   - `npm run typecheck`
