@@ -2035,6 +2035,11 @@ Tanggal: 2026-04-20
   - `npm run lint`
 - Published release:
   - branch: `production`
+  - message: `Badge sejajar judul dan waktu satu baris`
+  - update group: `a6ee3aca-656b-4116-89da-d3807a572350`
+  - commit delivered: `7f622a42d3edd04e2d7026c6ca77fa31d7b3fbf9`
+- Published release:
+  - branch: `production`
   - message: `Samakan hirarki teks card dengan referensi`
   - update group: `7157d20e-c12d-460d-8937-6e3764cd26d5`
   - commit delivered: `6e40c5d285bb7c32f5abf76fe8928fbb693f7b61`
@@ -2660,3 +2665,22 @@ Tanggal: 2026-04-20
   - message: `Kecilkan tinggi card dan rapikan badge`
   - update group: `a65ab20a-90f3-4ca3-8683-6f403183cb53`
   - commit delivered: `888062cd459971bdcc4d818cf0ac317f6a49d503`
+
+## Plan (Move Status Beside Title And Keep Date Time Inline - 2026-04-28)
+
+- [x] 1. Move `Dibuka` and the secondary task/attendance status into the same horizontal band as the main title instead of a dedicated row below
+- [x] 2. Keep compact tiles, but force date and time to stay on the same line so the card height drops and the values read as one unit
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then commit, publish, and push the refinement
+
+## Review Addendum (Move Status Beside Title And Keep Date Time Inline - 2026-04-28)
+
+- Root cause:
+  - the previous pass still left the main title and the status badges in separate vertical bands, so even after shrinking fonts the card still read taller than the user wanted
+  - the datetime values were technically shortened, but the equal-width three-column tiles still squeezed them enough to wrap, which meant the time was not visually beside the date
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` and `mobile/components/Redesign/AttendanceCard.tsx` now place the title on the left and the badges in the same hero row on the right, which removes the extra status row entirely
+  - `mobile/components/Redesign/CardInfoTile.tsx` was tightened again, and the three-tile layout now gives the date-based tiles more width than the activity/link tile so `22 Apr 00.00` can stay on one line
+  - `mobile/components/Redesign/Badge.tsx` was reduced slightly again so the badges fit beside the title without making the card feel heavy
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
