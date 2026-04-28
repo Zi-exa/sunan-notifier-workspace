@@ -2035,6 +2035,11 @@ Tanggal: 2026-04-20
   - `npm run lint`
 - Published release:
   - branch: `production`
+  - message: `Hapus aksen pinggir card`
+  - update group: `c7e2d1e6-41c3-4444-b934-8d713ced1b68`
+  - commit delivered: `61e44f97cb92ef6053f17fa086ae09756190f853`
+- Published release:
+  - branch: `production`
   - message: `Tambah preview isi tugas di card`
   - update group: `a6f305e7-9c05-4616-92a2-be5711006bf1`
   - commit delivered: `b073df30454371eb025d0e385ecd186b25070a16`
@@ -2704,6 +2709,23 @@ Tanggal: 2026-04-20
 - Fix:
   - `mobile/components/Redesign/TaskCard.tsx` now derives a compact preview from `task.intro` by collapsing line breaks and extra spaces, then shows that preview directly under the main title
   - the preview is capped at two lines so the card still reads as a list item instead of turning into a mini detail page, and all existing actions remain unchanged
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+
+## Plan (Remove Card Side Accent - 2026-04-28)
+
+- [x] 1. Remove the colored side strip from task and attendance cards without changing actions or card content
+- [x] 2. Clean up any now-unused accent-strip logic so the components stay simple
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then commit, publish, and push the refinement
+
+## Review Addendum (Remove Card Side Accent - 2026-04-28)
+
+- Root cause:
+  - both card components still carried a decorative side strip that was no longer wanted by the user, and that strip also left behind extra status-color plumbing in the component code
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` now removes the colored side strip entirely and drops the now-unused per-status accent-color mapping
+  - `mobile/components/Redesign/AttendanceCard.tsx` now removes the same side strip and simplifies the attendance status config back to just label and badge variant
 - Verification:
   - `npm run typecheck`
   - `npm run lint`
