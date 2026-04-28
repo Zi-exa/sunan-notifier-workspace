@@ -2035,6 +2035,11 @@ Tanggal: 2026-04-20
   - `npm run lint`
 - Published release:
   - branch: `production`
+  - message: `Pendekkan preview isi tugas`
+  - update group: `4e48138a-12e7-4c93-81e3-a4af684fc6ab`
+  - commit delivered: `36ecda8a01bb81e32500dd439d987b8dc5041756`
+- Published release:
+  - branch: `production`
   - message: `Hapus aksen pinggir card`
   - update group: `c7e2d1e6-41c3-4444-b934-8d713ced1b68`
   - commit delivered: `61e44f97cb92ef6053f17fa086ae09756190f853`
@@ -2726,6 +2731,23 @@ Tanggal: 2026-04-20
 - Fix:
   - `mobile/components/Redesign/TaskCard.tsx` now removes the colored side strip entirely and drops the now-unused per-status accent-color mapping
   - `mobile/components/Redesign/AttendanceCard.tsx` now removes the same side strip and simplifies the attendance status config back to just label and badge variant
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+
+## Plan (Shorten Task Preview Further - 2026-04-28)
+
+- [x] 1. Shorten the task preview content itself so only a brief hint remains on the card
+- [x] 2. Reduce the visual height of the preview by keeping it to a single compact line
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then commit, publish, and push the refinement
+
+## Review Addendum (Shorten Task Preview Further - 2026-04-28)
+
+- Root cause:
+  - the first preview pass exposed the task contents correctly, but the preview still used too much of the original intro text and still occupied two lines, so it felt longer than the user wanted
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` now trims the preview source text to a much shorter maximum length before rendering
+  - the preview itself is now clamped to one line with slightly smaller typography, so it stays as a quick hint instead of a second text block competing with the title
 - Verification:
   - `npm run typecheck`
   - `npm run lint`
