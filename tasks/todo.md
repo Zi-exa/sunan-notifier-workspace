@@ -2035,6 +2035,35 @@ Tanggal: 2026-04-20
   - `npm run lint`
 - Published release:
   - branch: `production`
+  - message: `Buat tiga tile sejajar di card`
+  - update group: `d6853f29-7ae4-4277-a343-a9141d4dfb15`
+  - commit delivered: `694302d5070dc652436e45824a818e65535b7325`
+- Published release:
+  - branch: `production`
+  - message: `Kecilkan ukuran card tugas dan absensi`
+  - update group: `87da74de-8af3-47f4-b9d0-d3c8f0bd7989`
+  - commit delivered: `edc88a6da0e644510b224b4cc7d57f75206fae17`
+
+## Plan (Force Three-Column Card Info Tiles - 2026-04-28)
+
+- [x] 1. Replace the current wrap-based bottom tile layout with an explicit three-column grid when a card has three supporting info blocks
+- [x] 2. Keep the same actions and content, but compact the tile internals enough that the three-column row still works on mobile for both `Tugas` and `Absensi`
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then commit and publish the JS-only layout update
+
+## Review Addendum (Force Three-Column Card Info Tiles - 2026-04-28)
+
+- Root cause:
+  - the card shell and proportions were already back to normal, but the bottom info area still relied on generic `flexWrap`
+  - because of that, the supporting tiles could break into uneven rows instead of reading like the three-block strip shown in the reference
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` and `mobile/components/Redesign/AttendanceCard.tsx` now detect when they have three support tiles and force them into an explicit three-column layout instead of free wrapping
+  - `mobile/components/Redesign/CardInfoTile.tsx` now supports a compact mode plus external layout styling, so the same tile component can stay readable even when each tile is only one-third of the card width
+  - the attendance quick-link tile title was shortened to `Buka` so the three-column layout stays cleaner on mobile without changing the action itself
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
   - message: `Kecilkan ukuran card tugas dan absensi`
   - update group: `87da74de-8af3-47f4-b9d0-d3c8f0bd7989`
   - commit delivered: `edc88a6da0e644510b224b4cc7d57f75206fae17`
