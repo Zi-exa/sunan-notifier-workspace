@@ -150,3 +150,4 @@
 - Jika user meminta badge status berada di samping judul dan waktu berada di samping tanggal, jangan puas dengan value string yang “secara teknis” sudah satu baris. Pastikan layout hero benar-benar menyatukan judul dengan badge, dan paksa tile compact merender tanggal+jam sebagai satu baris visual yang tidak pecah.
 - Jika user meminta elemen dekoratif seperti strip warna card dihapus, jangan cuma menyamarkan warnanya. Buang juga wrapper, constant, dan style yang hanya ada untuk dekorasi itu supaya komponen tetap bersih.
 - Jika user bilang preview card masih terlalu panjang, jangan hanya mengandalkan `numberOfLines`. Pendekkan juga sumber string preview-nya supaya hint yang tampil memang singkat, bukan paragraf panjang yang sekadar di-clamp.
+- Jika label KPI dashboard terasa berantakan, jangan buru-buru mengubah layout grid. Cek dulu apakah akar masalahnya hanya copy yang terlalu panjang, lalu pendekkan labelnya sebelum mengutak-atik komponen shared.

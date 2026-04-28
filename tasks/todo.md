@@ -2035,6 +2035,11 @@ Tanggal: 2026-04-20
   - `npm run lint`
 - Published release:
   - branch: `production`
+  - message: `Rapikan label dashboard terkumpul`
+  - update group: `a0234fef-e52b-48ef-a51c-80fd173ab34d`
+  - commit delivered: `22721dce389a4e03bf09af560a8b8e64737a62ef`
+- Published release:
+  - branch: `production`
   - message: `Pendekkan preview isi tugas`
   - update group: `4e48138a-12e7-4c93-81e3-a4af684fc6ab`
   - commit delivered: `36ecda8a01bb81e32500dd439d987b8dc5041756`
@@ -2748,6 +2753,22 @@ Tanggal: 2026-04-20
 - Fix:
   - `mobile/components/Redesign/TaskCard.tsx` now trims the preview source text to a much shorter maximum length before rendering
   - the preview itself is now clamped to one line with slightly smaller typography, so it stays as a quick hint instead of a second text block competing with the title
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+
+## Plan (Tidy Dashboard Submitted KPI Label - 2026-04-28)
+
+- [x] 1. Shorten or tidy the `Sudah Dikumpulkan` KPI label on the dashboard without changing the metric
+- [x] 2. Keep the dashboard KPI card layout stable and readable on mobile
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then commit, publish, and push the refinement
+
+## Review Addendum (Tidy Dashboard Submitted KPI Label - 2026-04-28)
+
+- Root cause:
+  - the dashboard KPI metric itself was fine, but the `Sudah Dikumpulkan` label was too long for the compact KPI card and made that card feel less tidy than the others
+- Fix:
+  - `mobile/app/(tabs)/index.tsx` now shortens that KPI label to `Terkumpul`, keeping the same submitted assignment count while making the dashboard card read more cleanly on mobile
 - Verification:
   - `npm run typecheck`
   - `npm run lint`
