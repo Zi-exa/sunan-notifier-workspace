@@ -2035,6 +2035,11 @@ Tanggal: 2026-04-20
   - `npm run lint`
 - Published release:
   - branch: `production`
+  - message: `Tambah preview isi tugas di card`
+  - update group: `a6f305e7-9c05-4616-92a2-be5711006bf1`
+  - commit delivered: `b073df30454371eb025d0e385ecd186b25070a16`
+- Published release:
+  - branch: `production`
   - message: `Badge sejajar judul dan waktu satu baris`
   - update group: `a6ee3aca-656b-4116-89da-d3807a572350`
   - commit delivered: `7f622a42d3edd04e2d7026c6ca77fa31d7b3fbf9`
@@ -2681,6 +2686,24 @@ Tanggal: 2026-04-20
   - `mobile/components/Redesign/TaskCard.tsx` and `mobile/components/Redesign/AttendanceCard.tsx` now place the title on the left and the badges in the same hero row on the right, which removes the extra status row entirely
   - `mobile/components/Redesign/CardInfoTile.tsx` was tightened again, and the three-tile layout now gives the date-based tiles more width than the activity/link tile so `22 Apr 00.00` can stay on one line
   - `mobile/components/Redesign/Badge.tsx` was reduced slightly again so the badges fit beside the title without making the card feel heavy
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+
+## Plan (Add Task Content Preview - 2026-04-28)
+
+- [x] 1. Add a short preview of the task contents to task cards using the existing assignment intro data
+- [x] 2. Keep the card readable on mobile by trimming the preview to a small number of lines and not changing existing actions
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then commit, publish, and push the change
+
+## Review Addendum (Add Task Content Preview - 2026-04-28)
+
+- Root cause:
+  - the task cards already showed title, status, and timing, but they gave no hint about the actual contents of the assignment unless the user opened the detail screen
+  - the assignment data already contained a sanitized `intro`, so the gap was not missing backend data but missing presentation on the card itself
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` now derives a compact preview from `task.intro` by collapsing line breaks and extra spaces, then shows that preview directly under the main title
+  - the preview is capped at two lines so the card still reads as a list item instead of turning into a mini detail page, and all existing actions remain unchanged
 - Verification:
   - `npm run typecheck`
   - `npm run lint`
