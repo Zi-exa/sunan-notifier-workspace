@@ -2038,6 +2038,11 @@ Tanggal: 2026-04-20
   - message: `Samakan hirarki teks card dengan referensi`
   - update group: `7157d20e-c12d-460d-8937-6e3764cd26d5`
   - commit delivered: `6e40c5d285bb7c32f5abf76fe8928fbb693f7b61`
+- Retest release:
+  - branch: `production`
+  - message: `Paksa refresh layout card terbaru`
+  - update group: `bfc7de56-31ff-4210-84eb-9ad0d6921d5c`
+  - commit delivered: `6e40c5d285bb7c32f5abf76fe8928fbb693f7b61`
 - Published release:
   - branch: `production`
   - message: `Rapikan tulisan di tile card`
