@@ -2035,6 +2035,11 @@ Tanggal: 2026-04-20
   - `npm run lint`
 - Published release:
   - branch: `production`
+  - message: `Samakan hirarki teks card dengan referensi`
+  - update group: `7157d20e-c12d-460d-8937-6e3764cd26d5`
+  - commit delivered: `6e40c5d285bb7c32f5abf76fe8928fbb693f7b61`
+- Published release:
+  - branch: `production`
   - message: `Rapikan tulisan di tile card`
   - update group: `7c206c68-656a-46f2-8c85-60798d2d9951`
   - commit delivered: `439f441fe574ee187869777ee046ea343332336d`
@@ -2604,6 +2609,25 @@ Tanggal: 2026-04-20
   - `mobile/components/Redesign/TaskCard.tsx` and `mobile/components/Redesign/AttendanceCard.tsx` now use a slimmer shell: thinner accent strip, tighter padding, smaller title, tighter badge spacing, and lighter top-row copy sizing
   - `mobile/components/Redesign/CardInfoTile.tsx` shrinks the shared icon bubbles and bottom tiles so the supporting info still matches the new visual language without dominating the card
   - `mobile/components/Redesign/Badge.tsx` trims badge padding, dot size, and text size so status pills stay readable but no longer feel oversized
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+
+## Plan (Match Reference Text Hierarchy - 2026-04-28)
+
+- [x] 1. Rework task and attendance card text hierarchy so the course row, large title, right-side status pills, and bottom tile labels follow the same reading order as the reference
+- [x] 2. Keep the same functions and three bottom info blocks, but shorten date text and rebalance the title/badge band so the hierarchy still reads clearly on mobile
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then commit and publish the JS-only layout refinement
+
+## Review Addendum (Match Reference Text Hierarchy - 2026-04-28)
+
+- Root cause:
+  - the previous pass fixed size and readability, but the text hierarchy still did not read like the reference mockup
+  - title, status pills, and tile values were still arranged like a generic stacked mobile card instead of the specific reference order the user pointed to
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` and `mobile/components/Redesign/AttendanceCard.tsx` now place the large title and status pills in the same visual band, with the title anchored on the left and the status pills grouped on the right like the reference
+  - the three bottom info tiles keep the same functions, but their date/time values now use a shorter single-line format in compact mode so the label-above/value-below pattern stays closer to the mockup
+  - `mobile/components/Redesign/CardInfoTile.tsx` rebalances compact typography so short labels and values remain readable while matching the intended hierarchy more closely
 - Verification:
   - `npm run typecheck`
   - `npm run lint`

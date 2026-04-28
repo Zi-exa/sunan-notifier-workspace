@@ -143,3 +143,4 @@
 - Jika referensi card yang diikuti terasa seperti mockup desktop, jangan biarkan proporsinya dibawa mentah ke mobile. Pertahankan struktur visualnya, lalu kecilkan shell card, ukuran bubble, title, badge, dan tile sampai kembali terasa normal di layar HP.
 - Jika user meminta bagian bawah card “3 row seperti gambar”, jangan biarkan layout bergantung pada `flexWrap` default. Ubah menjadi grid tiga kolom yang eksplisit, lalu padatkan isi tile agar stabil di mobile.
 - Jika tiga tile informasi dipaksa sejajar di mobile, jangan hanya mengecilkan padding. Ringkas juga isi value-nya, terutama tanggal/jam, ke format dua baris yang pendek agar tetap terbaca.
+- Jika user meminta penataan teks “persis seperti referensi”, jangan fokus ke ukuran saja. Samakan juga urutan baca visualnya: course row di atas, title besar sebagai fokus kiri, status pill di sisi kanan band yang sama, lalu tile bawah dengan label di atas dan value di bawah.
