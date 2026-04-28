@@ -2636,3 +2636,27 @@ Tanggal: 2026-04-20
 - Verification:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Tighten Card Height And Align Status Badges - 2026-04-28)
+
+- [x] 1. Reduce the remaining oversized typography and vertical spacing so task and attendance cards become shorter without changing actions or information
+- [x] 2. Move the task status badges into one horizontal row so `Dibuka` and `Belum Dikerjakan` sit side by side instead of stacking
+- [x] 3. Verify with `npm run typecheck` and `npm run lint`, then commit and publish the JS-only tuning update
+
+## Review Addendum (Tighten Card Height And Align Status Badges - 2026-04-28)
+
+- Root cause:
+  - even after the hierarchy fix, the card still felt tall because the header bubble, title scale, vertical padding, and compact tiles were all still one step too generous for a dense mobile list
+  - the task status badges were also still participating in a more flexible layout than the user wanted, so `Belum Dikerjakan` could visually fall below `Dibuka`
+- Fix:
+  - `mobile/components/Redesign/TaskCard.tsx` now uses a smaller title/detail/course scale, tighter vertical padding, and a dedicated `statusRow` so `Dibuka` and `Belum Dikerjakan` stay side by side on one line
+  - `mobile/components/Redesign/AttendanceCard.tsx` mirrors the same height reduction so its shell, title band, and bottom tiles stay balanced with the task cards
+  - `mobile/components/Redesign/CardInfoTile.tsx` and `mobile/components/Redesign/Badge.tsx` were tightened again so the bottom tiles and pills stop adding unnecessary height
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+- Published release:
+  - branch: `production`
+  - message: `Kecilkan tinggi card dan rapikan badge`
+  - update group: `a65ab20a-90f3-4ca3-8683-6f403183cb53`
+  - commit delivered: `888062cd459971bdcc4d818cf0ac317f6a49d503`
