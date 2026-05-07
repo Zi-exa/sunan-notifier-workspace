@@ -14,6 +14,9 @@ Folder ini berisi artefak backend untuk SUNAN Notifier.
   - kirim notification queue ke Expo Push / FCM
 - functions/daily-reminder/index.ts
   - enqueue reminder H-1 dan H-hari
+- functions/mobile-data/index.ts
+  - endpoint aman untuk operasi mobile ke `app_users`, `user_settings`, dan `user_devices`
+  - memvalidasi token SUNAN di server sebelum memakai service role Supabase
 
 ## Alur Ringkas
 
@@ -23,6 +26,7 @@ Folder ini berisi artefak backend untuk SUNAN Notifier.
 4. Jika ada perubahan, row masuk notification_queue
 5. send-push kirim queue ke device user
 6. daily-reminder menyiapkan reminder jam 07.00
+7. operasi mobile seperti sync profil, settings, dan device token lewat function mobile-data, bukan query langsung ke tabel public
 
 Catatan auth internal:
 - Endpoint function saat ini mendukung validasi menggunakan `SUPABASE_SERVICE_ROLE_KEY` atau `FUNCTION_AUTH_KEY`.
@@ -33,5 +37,6 @@ Catatan auth internal:
 - supabase functions deploy poll-sunan-data
 - supabase functions deploy send-push
 - supabase functions deploy daily-reminder
+- supabase functions deploy mobile-data
 
 Pastikan environment secrets terisi di project Supabase sebelum deploy.

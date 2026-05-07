@@ -2887,3 +2887,27 @@ Tanggal: 2026-04-20
 - Verifikasi:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Amankan Tabel Supabase Public Dengan RLS - 2026-05-07)
+
+- [x] 1. Audit tabel public Supabase yang masih diakses langsung dari mobile dan tentukan jalur aman sebelum RLS dinyalakan
+- [x] 2. Pindahkan operasi mobile sensitif ke Edge Function tervalidasi, lalu aktifkan RLS dan cabut akses langsung client ke tabel public
+- [x] 3. Verifikasi compile mobile, deploy function + migration, lalu catat hasil dan batasannya
+
+## Review Addendum (Amankan Tabel Supabase Public Dengan RLS - 2026-05-07)
+
+- Akar masalah:
+  - `app_users`, `user_settings`, `user_devices`, `task_snapshots`, `notification_queue`, dan `polling_runs` berada di schema `public` tanpa RLS
+  - mobile client sebelumnya memakai `anon key` untuk `upsert/select` langsung ke `app_users`, `user_settings`, dan `user_devices`, jadi menyalakan RLS tanpa refactor akan memutus aplikasi
+  - `app_users` juga menyimpan `moodle_token`, sehingga akses langsung client ke tabel public memang tidak layak dipertahankan
+- Perbaikan:
+  - `supabase/functions/mobile-data/index.ts` ditambahkan sebagai endpoint aman untuk sync profil, load/save settings, dan simpan push token; function ini memvalidasi token SUNAN lewat `core_webservice_get_site_info` lalu memakai service role Supabase di server
+  - `mobile/lib/supabase/repositories.ts` diubah agar mobile memanggil Edge Function `mobile-data`, bukan query tabel public langsung
+  - `mobile/app/_layout.tsx` dan `mobile/app/(tabs)/settings.tsx` disesuaikan dengan kontrak backend baru agar load settings, simpan settings, dan upsert device token tetap berjalan
+  - migration `supabase/migrations/20260507_0003_secure_public_tables.sql` menambahkan `search_path` aman untuk `set_updated_at`, index FK `user_devices(app_user_id)`, menyalakan dan memaksa RLS untuk tabel sensitif, serta mencabut grant `anon/authenticated` pada tabel-tabel itu
+  - `npx supabase functions deploy mobile-data` dan `npx supabase db push` berhasil dijalankan, jadi function dan migration sudah terpasang di project remote `rigzchjdqgpxaqybcrdg`
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npx supabase functions deploy mobile-data`
+  - `npx supabase db push`

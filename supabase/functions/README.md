@@ -16,6 +16,13 @@ Fungsi serverless yang disiapkan:
 - Jalankan reminder harian berdasarkan snapshot yang sudah ada
 - Menambahkan notifikasi deadline H-1 dan H-hari
 
+4. mobile-data
+- Endpoint aman untuk kebutuhan mobile:
+  - sync profil pengguna
+  - ambil/simpan settings
+  - simpan push token device
+- Validasi token SUNAN dilakukan di server sebelum akses service role ke tabel public
+
 ## Environment Variables
 
 Wajib:
@@ -39,4 +46,5 @@ Untuk delivery FCM:
    - supabase functions deploy poll-sunan-data
    - supabase functions deploy send-push
    - supabase functions deploy daily-reminder
+   - supabase functions deploy mobile-data
 3. Buat pg_cron jobs berdasarkan file supabase/migrations/20260421_0002_cron.sql
