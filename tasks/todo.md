@@ -2772,3 +2772,118 @@ Tanggal: 2026-04-20
 - Verification:
   - `npm run typecheck`
   - `npm run lint`
+
+## Plan (Fix Missing Task And Attendance Notifications - 2026-04-29)
+
+- [ ] 1. Audit the notification pipeline end-to-end: sync triggers, schedule helpers, dedupe, permissions, channels, and bootstrap handling
+- [ ] 2. Fix the root cause that prevents task or attendance notifications from appearing on device, using the smallest robust change
+- [ ] 3. Verify with code-level checks and targeted reasoning against the current behavior, then document the review and commit
+
+## Plan (Fix Missing Task And Attendance Notifications - 2026-04-29)
+
+- [x] 1. Audit the end-to-end notification flow for task and attendance events, including permission bootstrap, sync components, dedupe, and scheduling helpers
+- [x] 2. Identify the root cause of notifications not appearing on device and implement the smallest correct fix without regressing existing update or auth flows
+- [x] 3. Verify with static checks and targeted code-path inspection, then document the fix, commit it, and push
+
+## Review Addendum (Fix Missing Task And Attendance Notifications - 2026-04-29)
+
+- Root cause:
+  - task and attendance notifications were sent through local `expo-notifications`, but the runtime only prepared permissions and the Android notification channel inside `registerForPushNotificationsAsync()`
+  - that meant local notifications could silently fail whenever remote push registration was skipped or unavailable, especially in Expo Go where the function returns early by design
+- Fix:
+  - `mobile/lib/notifications/index.ts` now has a dedicated `ensureLocalNotificationsReadyAsync()` path that configures the handler, requests local notification permission, and creates the Android default channel independently of remote push token registration
+  - immediate task/attendance notifications and scheduled task notifications now all guard through that local setup helper before scheduling
+  - `mobile/app/_layout.tsx` now boots local notification readiness on startup, so task and attendance sync effects no longer depend on the remote push registration path to make notifications visible
+- Verification:
+  - `npm run typecheck`
+  - `npm run lint`
+
+## Plan (Laporan Proyek SUNAN Notifier - 2026-04-28)
+
+- [x] 1. Audit format dokumen referensi `.docx` dan screenshot aplikasi
+- [x] 2. Ringkas konteks proyek dari README, PRD, dan skema database
+- [x] 3. Susun laporan baru dengan struktur akademik yang menyesuaikan dokumen acuan
+- [x] 4. Buat diagram pendukung: arsitektur, ERD, use case, dan activity
+- [x] 5. Sisipkan screenshot aplikasi ke laporan
+- [x] 6. Generate output `.md` dan `.docx`, lalu verifikasi hasil file
+
+## Review Addendum (Laporan Proyek SUNAN Notifier - 2026-04-28)
+
+- Hasil:
+  - laporan baru berhasil dibuat di `reports/Laporan_SUNAN_Notifier_2026-04-28.md` dengan struktur yang mengikuti dokumen acuan: pendahuluan, analisis kebutuhan, proses bisnis, ERD, use case, activity diagram, arsitektur, metodologi, tata letak, dan daftar pustaka
+  - file diagram sumber Mermaid ditambahkan di folder `reports` agar ERD dan diagram pendukung tetap mudah direvisi
+  - diagram PNG `diagram-erd.png`, `diagram-usecase.png`, `diagram-activity.png`, dan `diagram-arsitektur.png` dibuat untuk kebutuhan sisip gambar pada dokumen Word
+  - screenshot Dashboard, Tugas, Absensi, Kalender, dan Pengaturan dari folder `D:\download chrome\uiuxsunan` berhasil disisipkan ke laporan
+  - dokumen Word final berhasil digenerate ke `reports/Laporan_SUNAN_Notifier_2026-04-28.docx`
+- Verifikasi:
+  - file output `.md`, `.mmd`, `.png`, dan `.docx` tervalidasi ada di folder `reports`
+  - arsip internal `.docx` menunjukkan `MEDIA_COUNT=9`, artinya diagram dan screenshot benar-benar tertanam di dokumen
+  - `word/document.xml` pada `.docx` memuat field TOC, sehingga daftar isi ikut terbentuk di dokumen Word
+
+## Review Addendum (Rapikan Format Kampus Laporan - 2026-04-28)
+
+- Perubahan:
+  - cover laporan dirapikan menjadi lebih formal dengan judul huruf kapital, penyebutan mata kuliah `Pengembangan Sistem Informasi`, label `Disusun oleh`, serta identitas program studi dan fakultas yang lebih seragam
+  - beberapa bagian isi diperhalus ke gaya bahasa yang lebih akademik, terutama pada latar belakang, manfaat, proses bisnis, metodologi, dan perancangan tata letak
+  - dokumen Word final digenerate ulang dari sumber Markdown terbaru agar versi `.md` dan `.docx` tetap sinkron
+- Verifikasi:
+  - file `reports/Laporan_SUNAN_Notifier_2026-04-28.docx` berhasil diperbarui
+  - pemeriksaan arsip internal `.docx` menunjukkan `MEDIA_COUNT=9`, `HAS_COURSE=True`, dan `HAS_TITLE=True`
+
+## Review Addendum (Perbaikan Syntax ERD dan Flowchart - 2026-04-28)
+
+- Akar masalah:
+  - source Mermaid sebelumnya masih memakai syntax yang tidak cukup konservatif untuk beberapa renderer, terutama atribut ERD `PK, FK`, tipe data yang terlalu spesifik seperti `timestamptz/jsonb`, dan panah dua arah `<-->` pada flowchart arsitektur
+  - node flowchart juga masih memakai bentuk label yang lebih longgar, sehingga berisiko berbeda hasil antar renderer Mermaid
+- Perbaikan:
+  - `reports/erd_sunan_notifier.mmd` diubah ke syntax ERD yang lebih aman: `string app_user_id PK FK`, tipe `datetime/text/string/int`, tanpa koma pada atribut key
+  - `reports/usecase_sunan_notifier.mmd`, `reports/activity_sunan_notifier.mmd`, dan `reports/arsitektur_sunan_notifier.mmd` diubah ke label string eksplisit seperti `Node["Label"]`
+  - panah dua arah pada arsitektur diganti menjadi dua panah satu arah agar kompatibilitas parser lebih tinggi
+  - blok Mermaid yang sama di `reports/Laporan_SUNAN_Notifier_2026-04-28.md` ikut disinkronkan
+  - dokumen Word revisi diagram dibuat sebagai file baru `reports/Laporan_SUNAN_Notifier_2026-04-28-revisi-diagram.docx` karena file `.docx` utama sedang terbuka dan tidak bisa dioverwrite
+- Verifikasi:
+  - hasil pemeriksaan dokumen revisi menunjukkan `HAS_PK_FK_COMMA=False`, `HAS_BIDIR_ARROW=False`, dan `HAS_STRING_ID=True`
+  - media tetap tertanam di dokumen revisi (`MEDIA_COUNT=9`)
+
+## Review Addendum (Cover Kampus dan Redaksi Makalah - 2026-04-28)
+
+- Perubahan:
+  - cover disesuaikan lebih dekat ke template kampus: ada judul `MAKALAH`, judul utama, kalimat `disusun untuk memenuhi tugas mata kuliah Pengembangan Sistem Informasi`, blok dosen pengampu, nama penyusun, lalu identitas program studi, fakultas, universitas, dan tahun
+  - logo UMK ditambahkan di tengah cover menggunakan aset `mobile/assets/images/Logo Universitas Muria Kudus [RiderGalau].png`
+  - redaksi beberapa bagian di sumber laporan diubah agar lebih menyerupai makalah kampus, misalnya memakai frasa seperti `makalah ini disusun`, `rumusan masalah dalam makalah ini`, dan `batasan masalah`
+  - dokumen Word baru dibuat sebagai `reports/Laporan_SUNAN_Notifier_2026-04-28-cover-kampus.docx`
+- Verifikasi:
+  - file kampus final berhasil dibuat
+  - pemeriksaan arsip internal `.docx` menunjukkan `MEDIA_COUNT=9`, `HAS_MAKALAH=True`, `HAS_NAMA_PENYUSUN=True`, dan `HAS_PSI=True`
+
+## Review Addendum (Ganti Daftar Pustaka dari Internet - 2026-04-28)
+
+- Perubahan:
+  - bagian `DAFTAR PUSTAKA` pada `reports/Laporan_SUNAN_Notifier_2026-04-28.md` diganti dari referensi buku umum dan dokumen internal menjadi referensi internet resmi yang relevan dengan stack proyek
+  - sumber yang dipakai mencakup Expo, Expo Router, Expo Notifications, React Native, Supabase Edge Functions, Moodle External Services, TanStack React Query, dan Firebase Cloud Messaging
+  - dokumen Word baru dibuat sebagai `reports/Laporan_SUNAN_Notifier_2026-04-28-cover-kampus-pustaka-internet.docx`
+- Verifikasi:
+  - file dokumen baru berhasil dibuat
+  - pemeriksaan isi `.docx` menunjukkan `HAS_EXPO=True`, `HAS_SUPABASE=True`, `HAS_MOODLE=True`, dan `HAS_FIREBASE=True`
+  - media tetap tertanam di dokumen (`MEDIA_COUNT=9`)
+
+## Plan (Perbaiki Notifikasi Tugas dan Absensi - 2026-04-29)
+
+- [x] 1. Audit alur notifikasi tugas dan absensi dari bootstrap app, sync component, helper scheduler, sampai dedupe key agar ketahuan titik gagalnya
+- [x] 2. Perbaiki akar masalah yang membuat notifikasi tidak pernah muncul, tanpa mengorbankan dedupe atau setting user
+- [x] 3. Verifikasi dengan typecheck/lint dan, bila relevan, pembacaan log/skenario runtime, lalu catat review dan commit
+
+## Review Addendum (Perbaiki Notifikasi Tugas dan Absensi - 2026-04-29)
+
+- Akar masalah:
+  - jalur local notification sebelumnya masih bergantung pada bootstrap push token, jadi permission/channel Android bisa tidak siap saat sync tugas atau absensi mencoba mengirim notifikasi lokal
+  - dedupe key untuk notifikasi instan ditulis sebelum `scheduleNotificationAsync()` benar-benar berhasil, sehingga satu kegagalan scheduling bisa membuat notifikasi untuk event yang sama hilang selamanya
+  - notifikasi tugas yang aktif di runtime ternyata terlalu sempit karena hanya mengirim `tugas dibuka` dan `tugas segera ditutup`, sementara toggle `tugas baru`, `pengingat H-1`, dan `pengingat hari H` belum ikut dipakai
+- Perbaikan:
+  - `mobile/lib/notifications/index.ts` sekarang punya bootstrap local notification terpisah dari registrasi push token, dan helper notifikasi instan mengembalikan status sukses/gagal agar caller bisa dedupe dengan benar
+  - `mobile/app/_layout.tsx` sekarang menyiapkan local notification saat app boot, sehingga sync tidak lagi bergantung pada jalur push token
+  - `mobile/components/app/TaskNotificationSync.tsx` dan `mobile/components/app/AttendanceNotificationSync.tsx` sekarang memakai guard `pendingKeysRef` dan baru menulis dedupe key setelah scheduling benar-benar sukses
+  - `mobile/components/app/TaskNotificationSync.tsx` sekarang juga menghidupkan jalur `tugas baru`, `pengingat H-1`, dan `pengingat hari H`, jadi seluruh toggle notifikasi tugas yang tersimpan di settings ikut dipakai runtime
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
