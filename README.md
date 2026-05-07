@@ -77,21 +77,23 @@ Sprint 4:
 
 ## Setup Supabase
 
-1. Jalankan SQL migration dari:
-   - supabase/migrations/20260420_0001_init.sql
-   - supabase/migrations/20260421_0002_cron.sql
+1. Jalankan semua migration di folder `supabase/migrations` secara berurutan.
+   Jika memakai CLI, paling aman langsung:
+   - `npx supabase db push`
 
 2. Deploy edge functions:
    - poll-sunan-data
    - send-push
    - daily-reminder
+   - mobile-data
 
 3. Set environment variables server:
    - SUPABASE_URL
    - SUPABASE_SERVICE_ROLE_KEY
    - MOODLE_BASE_URL
-   - FCM_SERVICE_ACCOUNT_JSON (direkomendasikan untuk FCM HTTP v1)
-   - FCM_SERVER_KEY (opsional fallback legacy)
+    - FCM_SERVICE_ACCOUNT_JSON (direkomendasikan untuk FCM HTTP v1)
+    - FCM_SERVER_KEY (opsional fallback legacy)
+   - FUNCTION_AUTH_KEY (disarankan untuk auth internal antar cron/function)
 
 4. Update placeholder URL dan bearer key pada file cron SQL sebelum eksekusi.
 

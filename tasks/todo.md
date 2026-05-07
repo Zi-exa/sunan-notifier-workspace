@@ -2911,3 +2911,24 @@ Tanggal: 2026-04-20
   - `npm run lint`
   - `npx supabase functions deploy mobile-data`
   - `npx supabase db push`
+
+## Plan (Rapikan Alert Supabase Tersisa - 2026-05-07)
+
+- [x] 1. Audit alert Supabase yang masih mungkin tersisa setelah RLS aktif, terutama extension/schema dan warning advisor non-RLS
+- [x] 2. Terapkan migration lanjutan yang aman untuk menutup alert tersebut tanpa merusak cron/function yang sudah berjalan
+- [x] 3. Dorong migration ke project linked, verifikasi sejauh CLI memungkinkan, lalu catat hasil dan batasannya
+
+## Review Addendum (Rapikan Alert Supabase Tersisa - 2026-05-07)
+
+- Temuan:
+  - `search_path` mutable pada `set_updated_at` dan FK `user_devices(app_user_id)` sudah ikut tertutup oleh migration keamanan sebelumnya
+  - alert `Extension in Public` yang paling mungkin tersisa berasal dari `pg_net`
+  - percobaan pertama dengan `ALTER EXTENSION pg_net SET SCHEMA ...` gagal karena `pg_net` memang tidak mendukung `SET SCHEMA`
+- Perbaikan:
+  - migration follow-up `supabase/migrations/20260508_0001_move_pg_net_extension.sql` dibuat memakai jalur yang direkomendasikan docs Supabase troubleshooting: recreate `pg_net` di schema `extensions`
+  - migration itu diberi guard yang memblok proses bila `net.http_request_queue` masih berisi request aktif, agar extension tidak dijatuhkan saat antrean belum kosong
+  - README root diperbarui agar setup backend memakai `npx supabase db push` untuk seluruh migration dan juga menyertakan function `mobile-data`
+- Verifikasi:
+  - `npx supabase db push`
+  - `npx supabase migration list` menunjukkan remote sudah sampai versi `20260508`
+  - `npx supabase db lint --linked --fail-on warning` tidak bisa dipakai di mesin ini karena CLI meminta `SUPABASE_DB_PASSWORD` untuk login role sementara, jadi verifikasi advisor akhir tetap perlu dilihat lagi di dashboard Supabase
