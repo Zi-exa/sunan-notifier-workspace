@@ -2932,3 +2932,292 @@ Tanggal: 2026-04-20
   - `npx supabase db push`
   - `npx supabase migration list` menunjukkan remote sudah sampai versi `20260508`
   - `npx supabase db lint --linked --fail-on warning` tidak bisa dipakai di mesin ini karena CLI meminta `SUPABASE_DB_PASSWORD` untuk login role sementara, jadi verifikasi advisor akhir tetap perlu dilihat lagi di dashboard Supabase
+
+## Plan (Perbaiki Notifikasi Tugas dan Absensi Baru - 2026-05-12)
+
+- [x] 1. Audit ulang jalur notifikasi tugas baru dan absensi baru dari query data, setting user, permission/channel lokal, sampai dedupe persistent
+- [x] 2. Reproduksi akar masalah secara lokal lewat test/unit atau simulasi fungsi agar jelas kenapa notifikasi tidak dikirim saat item baru muncul
+- [x] 3. Terapkan perbaikan minimal yang menjaga dedupe, scope mata kuliah dipantau, dan pengaturan user tetap benar
+- [x] 4. Verifikasi dengan typecheck/lint dan bukti perilaku notifikasi, lalu tulis review hasil serta lessons yang relevan
+
+## Review Addendum (Perbaiki Notifikasi Tugas dan Absensi Baru - 2026-05-12)
+
+- Akar masalah:
+  - setting `pollingInterval` hanya tersimpan di UI/store, belum menggerakkan refetch tugas dan absensi saat app sedang terbuka
+  - absensi yang masih `upcoming` tidak dijadwalkan sebagai local notification untuk waktu mulai sesi, jadi notif hanya muncul kalau app kebetulan refetch saat sesi sudah open
+  - backend `poll-sunan-data` masih lebih sempit dari parser mobile: hanya membaca assignment, hanya memakai satu endpoint kalender, dan hanya mendeteksi nama event yang mengandung `absensi` atau `attendance`
+- Perbaikan:
+  - query tugas dan absensi mobile sekarang refetch berkala sesuai `pollingInterval`, plus invalidate saat app kembali aktif dari background
+  - `AttendanceNotificationSync` sekarang menjadwalkan local notification untuk absensi upcoming pada `startsAt`, memakai dedupe key yang sama dengan notifikasi open harian agar tidak dobel
+  - `poll-sunan-data` backend sekarang juga membaca quiz, memakai parser kalender fleksibel untuk action events dan upcoming view, serta mendeteksi absensi lewat module/eventtype/url/keyword
+  - migration provisioning cron baru disiapkan agar job membaca `project_url` dan `function_auth_key` dari Supabase Vault, bukan placeholder literal
+  - Edge Function `poll-sunan-data` sudah dideploy ke project `rigzchjdqgpxaqybcrdg`
+  - EAS Update sudah dipublish ke branch `production` untuk runtime `1.0.1` dengan update group `1e7d6bec-ccdd-4682-88b1-95fb94411d73`
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
+  - transpile check TypeScript untuk `supabase/functions/poll-sunan-data/index.ts`
+  - `npx supabase functions deploy poll-sunan-data --use-api`
+  - `npx supabase db lint --linked --fail-on warning`
+  - manual trigger command cron `poll-sunan-data-every-15m` menghasilkan `polling_runs` baru `id=2061` dengan status `completed`
+  - `npx eas update --branch production --message "Perbaiki notifikasi tugas dan absensi" --non-interactive`
+
+## Plan (Explicit Grant Data API Supabase - 2026-05-14)
+
+- [x] 1. Audit akses Supabase project: mobile direct Data API vs Edge Function service role, grants existing, dan RLS
+- [x] 2. Tambahkan migration idempotent untuk explicit grants/revokes existing tables dan default privileges future tables/sequences
+- [x] 3. Apply SQL ke remote secara aman tanpa mendorong migration pending yang tidak terkait
+- [x] 4. Verifikasi grant remote, lint Supabase, lalu catat hasil dan lesson
+
+## Review Addendum (Explicit Grant Data API Supabase - 2026-05-14)
+
+- Akar masalah:
+  - Supabase akan berhenti memberi grant Data API implisit untuk tabel baru di `public`
+  - project ini memakai Data API dari Edge Functions dengan `service_role`, sedangkan mobile sudah tidak akses tabel langsung
+- Perbaikan:
+  - migration `supabase/migrations/20260513183526_explicit_data_api_grants.sql` dibuat untuk grant tabel dan sequence existing ke `service_role`
+  - migration yang sama revoke akses `anon`/`authenticated` dan set default privileges `postgres` agar tabel/sequence baru ikut grant ke `service_role`
+  - catatan Supabase README diperbarui agar migration berikutnya tidak membuka public roles tanpa alasan
+- Verifikasi:
+  - SQL migration diaplikasikan ke remote via `npx supabase db query --linked -f supabase\migrations\20260513183526_explicit_data_api_grants.sql`
+  - tabel utama remote hanya menampilkan grants untuk `service_role` pada role Data API yang dicek
+  - sequence `task_snapshots_id_seq`, `notification_queue_id_seq`, dan `polling_runs_id_seq` punya `USAGE`/`SELECT` untuk `service_role`, dan tidak punya `USAGE` untuk `anon`/`authenticated`
+  - default privileges `postgres` di schema `public` sekarang berisi `service_role=arwdDxtm` untuk table dan `service_role=rwU` untuk sequence
+  - `npx supabase db lint --linked --fail-on warning`
+
+## Plan (Debug Absensi Dibuka Tanpa Notifikasi - 2026-05-14)
+
+- [x] 1. Audit bukti runtime remote: polling_runs, notification_queue, active device, dan setting notifikasi user untuk melihat apakah absensi di-queue atau gagal terkirim
+- [x] 2. Audit kode jalur absensi local dan backend untuk kondisi yang bisa melewatkan sesi yang sudah dibuka
+- [x] 3. Terapkan perbaikan minimal berdasarkan root cause, tanpa mengubah jadwal tugas yang belum diuji
+- [x] 4. Verifikasi dengan typecheck/lint, deploy/publish bila perlu, dan catat review serta lesson
+
+## Review Addendum (Debug Absensi Dibuka Tanpa Notifikasi - 2026-05-14)
+
+- Akar masalah:
+  - setting notifikasi user untuk absensi aktif, tetapi remote mencatat `active_devices=0`, sehingga push tidak punya token device tujuan
+  - antrean notifikasi historis berisi kegagalan `Tidak ada device aktif untuk user ini.`, jadi masalah pengiriman nyata terjadi setelah event masuk jalur backend
+  - backend lama hanya menganggap `attendance_open` valid di window sekitar `timestart`, sehingga sesi yang sudah dibuka tetapi masih berlangsung bisa terlewat saat cron baru melihatnya
+  - manual poll terbaru setelah deploy mencatat `attendance_events_detected=0`, artinya saat verifikasi tidak ada event absensi aktif/terdeteksi di scope mata kuliah yang dipantau
+- Perbaikan:
+  - `poll-sunan-data` sekarang melakukan lookback absensi sampai 24 jam dan tetap queue `attendance_open` untuk sesi yang sudah open selama masih dalam durasi, atau masih pada hari Jakarta yang sama bila tidak ada durasi
+  - detail `polling_runs` sekarang menyimpan `attendance_events_detected` agar verifikasi absensi berikutnya tidak perlu menebak dari queue kosong saja
+  - registrasi notifikasi mobile sekarang fallback ke native device push token jika Expo push token tidak tersedia atau gagal, supaya APK tetap bisa menyimpan token FCM yang didukung `send-push`
+  - fallback token native dinormalisasi agar hanya menyimpan token string valid, bukan bentuk data tak terduga
+  - Edge Function `poll-sunan-data` sudah dideploy sebagai version 7, dan EAS Update terbaru sudah dipublish ke branch `production` dengan group `61e12db6-7812-4117-b2ee-5a780d86639d`
+- Verifikasi:
+  - `npm run typecheck` di folder `mobile`
+  - `npm run lint` di folder `mobile`
+  - transpile check TypeScript untuk `supabase/functions/poll-sunan-data/index.ts`
+  - `npx supabase functions deploy poll-sunan-data --use-api`
+  - manual trigger cron `poll-sunan-data-every-15m` menghasilkan `polling_runs` baru `id=2226` dengan status `completed`
+  - `polling_runs` terbaru yang berhasil dicek (`id=2227`) mencatat `attendance_events_detected=0`, `notifications_queued=0`, dan `snapshots_upserted=7` pada data SUNAN saat verifikasi
+  - `npx supabase functions list` menunjukkan `poll-sunan-data` aktif di version 7
+  - `npx eas update --branch production --message "Perbaiki fallback token push absensi" --non-interactive` menghasilkan update group `61e12db6-7812-4117-b2ee-5a780d86639d`
+  - `npx supabase db lint --linked --fail-on warning`
+
+## Plan (Cek Device Token Setelah Update - 2026-05-14)
+
+- [x] 1. Verifikasi branch EAS production masih berada di update group terbaru yang memuat fallback token push
+- [x] 2. Cek remote Supabase untuk device aktif user, antrean notifikasi terbaru, dan polling run setelah user update app
+- [x] 3. Dokumentasikan hasil cek dan tindakan lanjutan bila token device masih belum aktif
+
+## Review Addendum (Cek Device Token Setelah Update - 2026-05-14)
+
+- Hasil cek:
+  - EAS branch `production` sudah berada di update group terbaru `61e12db6-7812-4117-b2ee-5a780d86639d` dengan message `Perbaiki fallback token push absensi`
+  - akun `202351207 MUHAMMAD ZAHIRUL KHABSI` masih mencatat `active_devices=0` dan `latest_device=null`
+  - setting notifikasi akun tersebut masih aktif: `notify_attendance=true`, `notify_new_task=true`, `notify_task_open=true`, `notify_deadline_h1=true`, dan `notify_deadline_today=true`
+  - polling terbaru yang dicek (`id=2230`, 2026-05-14 06:15 WIB) selesai normal, tetapi masih `attendance_events_detected=0` dan `notifications_queued=0`
+  - antrean notifikasi terbaru yang ada masih antrean lama dengan kegagalan `Tidak ada device aktif untuk user ini.`
+- Kesimpulan:
+  - update app sudah tersedia di production, tetapi device user belum berhasil mendaftarkan push token ke remote
+  - penyebab paling mungkin di device adalah app belum benar-benar restart ke update terbaru, user belum login/masuk ke area app setelah update, atau izin notifikasi Android masih belum aktif
+
+## Plan (Fix Device Token Tetap Tidak Masuk Supabase - 2026-05-14)
+
+- [x] 1. Audit ulang syarat `syncPushToken` di app, bentuk user session, helper token push, dan endpoint `mobile-data`
+- [x] 2. Temukan alasan token/upsert gagal tanpa terlihat di UI atau remote
+- [x] 3. Terapkan fix minimal agar app bisa mendaftarkan device atau menampilkan status gagal yang bisa diverifikasi
+- [x] 4. Verifikasi typecheck/lint, publish/deploy yang diperlukan, lalu cek ulang Supabase remote
+- [x] 5. Catat review hasil dan lesson dari koreksi user
+
+## Review Addendum (Fix Device Token Tetap Tidak Masuk Supabase - 2026-05-14)
+
+- Akar masalah:
+  - EAS Update JS sudah publish, tetapi tidak ada build Android baru untuk runtime `1.0.1`; APK lama yang tersedia di EAS masih profile `preview`, runtime/version `1.0.0`, dan tidak menerima update `1.0.1`
+  - Firebase project `sunan-notifier` belum punya Android app/client untuk package APK, sehingga native/Expo push token tidak bisa dibuat dengan benar
+  - build native juga belum membawa `google-services.json` dan permission Android `POST_NOTIFICATIONS`
+  - jalur `syncPushToken` sebelumnya menelan error di `catch {}` sehingga user hanya melihat Supabase tetap kosong tanpa alasan di UI
+- Perbaikan:
+  - Firebase Android app dibuat untuk `id.umk.sunannotifier` dan `id.umk.sunannotifier.preview`
+  - `google-services.json` ditambahkan sebagai file build tracked dan dihubungkan lewat `android.googleServicesFile`
+  - permission `android.permission.POST_NOTIFICATIONS` ditambahkan di konfigurasi Android
+  - `versionCode` dinaikkan ke `2` dan EAS `appVersionSource` dipindah ke `local` agar APK baru bisa dipasang di atas build lama
+  - `registerForPushNotificationsDetailedAsync()` ditambahkan agar hasil registrasi token punya status jelas (`registered`, `denied`, `unavailable`, atau `error`)
+  - Settings sekarang menampilkan status pendaftaran perangkat agar kegagalan token push tidak diam-diam
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
+  - build pertama `46b4b6ac-5301-4c52-9970-d870d49fda6b` gagal valid karena Firebase config belum punya client `id.umk.sunannotifier.preview`
+  - setelah client preview ditambahkan, EAS APK build berhasil: `dc58c426-799b-407c-8e8f-fee7103034b6`
+  - APK artifact: `https://expo.dev/artifacts/eas/td9gHt4YLURMiLgFrFP7Ru.apk`
+  - build metadata: `appVersion=1.0.1`, `appBuildVersion=2`, `runtimeVersion=1.0.1`, channel `preview`
+  - EAS Update branch `preview` publish group `e096a144-1c97-4440-a26d-a174de7298c4`
+  - EAS Update branch `production` publish group `b78ae119-2c09-4c72-a20b-d85fa6b9b538`
+  - cek Supabase sebelum APK baru dipasang masih benar menunjukkan `active_devices=0` untuk akun `202351207`
+
+## Plan (Rilis APK Produksi via GitHub - 2026-05-14)
+
+- [x] 1. Audit penyebab APK preview tidak bisa dipakai sebagai update aplikasi yang sudah terpasang
+- [x] 2. Siapkan build profile APK produksi dengan package `id.umk.sunannotifier` dan versionCode lebih tinggi
+- [x] 3. Build APK produksi terbaru dan verifikasi metadata build/artifact
+- [x] 4. Publish perubahan source dan APK ke GitHub release repository mobile
+- [x] 5. Catat hasil rilis dan lesson dari koreksi user
+
+## Review Addendum (Rilis APK Produksi via GitHub - 2026-05-14)
+
+- Akar masalah:
+  - APK sebelumnya yang saya berikan adalah profile `preview`, sehingga package-nya `id.umk.sunannotifier.preview`
+  - app yang terpasang user memakai package produksi `id.umk.sunannotifier`, jadi Android menolak APK preview sebagai update aplikasi yang sama
+- Perbaikan:
+  - profile EAS baru `production-apk` ditambahkan: output APK, channel `production`, package produksi, runtime `1.0.1`
+  - EAS environment production/preview dilengkapi `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, dan `EXPO_PUBLIC_EXPO_PROJECT_ID`
+  - perubahan mobile di-commit dan di-push ke `Zi-exa/sunan-notifier-mobile`
+  - APK produksi dirilis lewat GitHub Release, bukan link preview EAS
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npx expo config` untuk profile `production-apk` menunjukkan package `id.umk.sunannotifier`, `versionCode=2`, channel `production`, dan `googleServicesFile=./google-services.json`
+  - EAS build produksi berhasil: `a6e8a06c-17c0-4afd-a5f5-f77e55f2060a`
+  - APK artifact EAS: `https://expo.dev/artifacts/eas/mBq3V5pzrGCsHQUjZKQYAE.apk`
+  - SHA256 APK: `ADAB5C79ED74A0D78FD3F362A9E68D08E6A45DD3D5DD0E3DAA152BD267CDBC94`
+  - GitHub Release awal sempat keliru masuk repo source mobile: `https://github.com/Zi-exa/sunan-notifier-mobile/releases/tag/v1.0.1-build2`
+
+## Plan (Pindahkan APK ke Repo Rilis - 2026-05-14)
+
+- [x] 1. Verifikasi repo rilis historis yang benar untuk APK SUNAN Notifier
+- [x] 2. Upload APK produksi build 2 ke `Zi-exa/sunan-notifier-releases`
+- [x] 3. Verifikasi asset release dan catat link final
+- [x] 4. Catat lesson agar release APK berikutnya tidak masuk repo source mobile
+
+## Review Addendum (Pindahkan APK ke Repo Rilis - 2026-05-14)
+
+- Koreksi user benar: repo distribusi APK historis adalah `Zi-exa/sunan-notifier-releases`, bukan repo source `Zi-exa/sunan-notifier-mobile`.
+- APK produksi build 2 sudah di-upload ke release `v1.0.1` pada repo `Zi-exa/sunan-notifier-releases`.
+- Asset baru tersedia sebagai `SUNAN-Notifier-v1.0.1-build2.apk`:
+  - `https://github.com/Zi-exa/sunan-notifier-releases/releases/download/v1.0.1/SUNAN-Notifier-v1.0.1-build2.apk`
+- Asset default `app-release.apk` juga sudah diganti dengan file build 2 yang sama agar `update.json` lama tetap mengunduh APK terbaru:
+  - `https://github.com/Zi-exa/sunan-notifier-releases/releases/download/v1.0.1/app-release.apk`
+- Verifikasi GitHub untuk kedua asset:
+  - size: `80315553`
+  - digest: `sha256:adab5c79ed74a0d78fd3f362a9e68d08e6a45dd3d5dd0e3daa152bd267cdbc94`
+- Lesson ditambahkan agar rilis APK berikutnya selalu masuk repo `Zi-exa/sunan-notifier-releases`.
+
+## Review Addendum (Device Token Terdeteksi - 2026-05-14)
+
+- Setelah APK build 2 dipasang/dibuka user, remote Supabase sudah mencatat device aktif untuk akun `202351207 MUHAMMAD ZAHIRUL KHABSI`.
+- Verifikasi query remote:
+  - `active_devices=1`
+  - `latest_seen_at=2026-05-14 18:11:48 WIB`
+  - `latest_device_updated_at=2026-05-14 18:11:48 WIB`
+- Artinya akar masalah sebelumnya `active_devices=0` sudah teratasi; backend push sekarang punya target device aktif. Sisa verifikasi berikutnya adalah event nyata atau test notification yang masuk ke `notification_queue`.
+
+## Plan (Ganti Placeholder NIM Login - 2026-05-14)
+
+- [x] 1. Cari teks contoh NIM yang muncul di halaman login
+- [x] 2. Ganti placeholder agar tidak memakai NIM user
+- [x] 3. Catat lesson privasi placeholder dan verifikasi diff perubahan
+
+## Review Addendum (Ganti Placeholder NIM Login - 2026-05-14)
+
+- Placeholder field NIM di `mobile/app/login.tsx` diganti dari contoh NIM nyata user menjadi `Masukkan NIM SUNAN`.
+- Lesson ditambahkan agar placeholder/contoh UI berikutnya tidak memakai data pribadi user/tester.
+- Verifikasi:
+  - `git grep -n "202351207" -- app/login.tsx` tidak menemukan NIM user di file login
+  - `npm run typecheck` sukses di folder `mobile`
+  - commit source mobile: `d28c239 fix: remove personal NIM from login placeholder`
+  - push ke `Zi-exa/sunan-notifier-mobile` branch `master`
+  - EAS Update production publish group `f4b10770-0d16-49c3-bc71-a5e2a9bfecb7` dengan message `Ganti placeholder NIM login`
+
+## Plan (Hilangkan Status Perangkat dari Settings - 2026-05-14)
+
+- [x] 1. Cari UI `Perangkat aktif (expo/native)` di section Notifikasi
+- [x] 2. Hapus kartu status perangkat dari Settings tanpa mematikan registrasi push token
+- [x] 3. Verifikasi typecheck, commit/push source mobile, dan publish update production
+
+## Review Addendum (Hilangkan Status Perangkat dari Settings - 2026-05-14)
+
+- Kartu status perangkat push di section `Notifikasi` halaman Pengaturan dihapus.
+- Import dan pembacaan `usePushTokenSyncStore` di `mobile/app/(tabs)/settings.tsx` ikut dihapus karena sudah tidak dipakai UI.
+- Registrasi push token tetap berjalan dari bootstrap app, jadi fungsi notifikasi tidak dimatikan; yang dihilangkan hanya tampilan diagnostik `Perangkat aktif (expo/native)`.
+- Lesson ditambahkan agar diagnostik teknis device/token tidak ditampilkan di UI user biasa.
+- Verifikasi:
+  - `git grep -n -E "Perangkat aktif|Perangkat belum aktif|Mendaftarkan perangkat|pushStatus|pushSync|usePushTokenSyncStore" -- "app/(tabs)/settings.tsx"` tidak menemukan sisa UI status perangkat
+  - `npm run typecheck`
+  - `npm run lint`
+  - commit source mobile: `9d8d501 fix: hide push device status from settings`
+  - push ke `Zi-exa/sunan-notifier-mobile` branch `master`
+  - EAS Update production publish group `6907e76c-5968-47ea-a11f-53b51f07447f` dengan message `Hilangkan status perangkat di pengaturan`
+
+## Plan (Debug H-1 Deadline Tidak Masuk - 2026-05-16)
+
+- [x] 1. Audit remote Supabase untuk akun user: settings notifikasi, device aktif, `task_snapshots` deadline 16 Mei 2026 23:59, dan `notification_queue`
+- [x] 2. Bandingkan bukti remote dengan kode scheduler H-1 di mobile dan Edge Function
+- [x] 3. Terapkan perbaikan root cause bila queue/schedule/push terbukti salah
+- [x] 4. Verifikasi dengan query/test/deploy/publish yang relevan dan catat lesson agar kasus H-1 tidak terulang
+
+## Review Addendum (Debug H-1 Deadline Tidak Masuk - 2026-05-16)
+
+- Akar masalah utama:
+  - Remote setting akun `202351207` masih membatasi `monitored_course_ids` ke `24255` (`PRAKTEK KERJA LAPANGAN`).
+  - Tugas yang dilaporkan adalah `Penugasan PTM 9`, `courseId=24263` (`KAPITA SELEKTA`), deadline `2026-05-16 23:59 WIB`.
+  - Karena course tugas tidak masuk scope monitoring backend, `task_snapshots` tidak punya row tugas itu dan `notification_queue` tidak pernah menerima `deadline_h1`.
+- Perbaikan data:
+  - `monitored_course_ids` akun user dikosongkan agar kembali memantau semua mata kuliah.
+  - Manual trigger `poll-sunan-data` menghasilkan run `id=2423`, `snapshots_upserted=22`, `notifications_queued=6`.
+  - Snapshot tugas `107561 Penugasan PTM 9` sekarang masuk remote dengan status `pending`.
+  - Queue `deadline_today` untuk tugas tersebut dibuat sebagai `notification_queue.id=213`.
+- Akar masalah tambahan:
+  - Helper DND backend memakai `Date.getHours()`/`setHours()` server UTC, padahal setting DND dimaknai WIB.
+  - Akibatnya reminder setelah DND `22:00-07:00` bergeser ke `14:00 WIB`, bukan `07:00 WIB`.
+- Perbaikan kode:
+  - `supabase/functions/poll-sunan-data/index.ts` dan `supabase/functions/daily-reminder/index.ts` sekarang menghitung jam DND memakai formatter `Asia/Jakarta`.
+  - Jadwal DND end dibangun eksplisit sebagai timestamp `+07:00`, bukan local server time.
+  - Queue pending yang sudah terlanjur `14:00 WIB` untuk user dikoreksi ke `2026-05-16 07:00 WIB`.
+- Verifikasi:
+  - `npx esbuild supabase/functions/poll-sunan-data/index.ts --bundle --platform=neutral --format=esm --external:npm:*`
+  - `npx esbuild supabase/functions/daily-reminder/index.ts --bundle --platform=neutral --format=esm --external:npm:*`
+  - `npx supabase functions deploy poll-sunan-data --use-api` -> remote version `9`
+  - `npx supabase functions deploy daily-reminder --use-api` -> remote version `6`
+  - Query remote setelah perbaikan menunjukkan `deadline_today` tugas `Penugasan PTM 9` pending dengan `schedule_wib=2026-05-16 07:00:00`
+  - Pada saat verifikasi DB `now_wib=2026-05-16 06:25:22`, jadi queue masih future pending dan akan diambil `send-push` setelah jadwal tercapai.
+
+## Plan (Perjelas Scope Mata Kuliah Dipantau - 2026-05-16)
+
+- [x] 1. Audit UI `Mata Kuliah Dipantau` yang memakai makna tersembunyi kosong = semua
+- [x] 2. Ubah UI menjadi mode eksplisit `Semua` dan `Pilih`
+- [x] 3. Verifikasi typecheck/lint, commit/push mobile, dan publish EAS Update production
+
+## Review Addendum (Perjelas Scope Mata Kuliah Dipantau - 2026-05-16)
+
+- Section `Mata Kuliah Dipantau` sekarang menampilkan dua mode eksplisit:
+  - `Semua`: pengingat aktif untuk semua mata kuliah, termasuk yang baru muncul
+  - `Pilih`: pengingat hanya untuk mata kuliah yang dicentang
+- Daftar checkbox mata kuliah hanya tampil ketika mode `Pilih` aktif, sehingga state kosong tidak lagi terlihat seperti belum memilih apa pun.
+- Summary section diubah dari `Semua mata kuliah dipantau` menjadi `Semua mata kuliah` atau `N dipilih`.
+- Lesson ditambahkan agar setting scope tidak memakai makna tersembunyi tanpa affordance UI.
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
+  - commit source mobile: `7a5c3a9 fix: clarify monitored course scope setting`
+  - push ke `Zi-exa/sunan-notifier-mobile` branch `master`
+  - EAS Update production publish group `59bd18f1-a9f6-4e64-beed-169a6d0deee6` dengan message `Perjelas pilihan mata kuliah dipantau`
+
+## Plan (Push Workspace dan Jadikan Repo Publik - 2026-05-16)
+
+- [ ] 1. Audit remote GitHub dan visibilitas repo `sunan-notifier-workspace` serta `sunan-notifier-mobile`
+- [ ] 2. Audit perubahan lokal dan file untracked agar tidak ada secret/artefak lokal yang ikut dipublish
+- [ ] 3. Commit dan push perubahan workspace yang relevan ke GitHub
+- [ ] 4. Ubah repo yang diminta menjadi public dan verifikasi visibilitas akhir
+- [ ] 5. Catat hasil publikasi dan sisa risiko bila ada file yang sengaja tidak dipush

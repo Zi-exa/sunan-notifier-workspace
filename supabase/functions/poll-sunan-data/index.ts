@@ -32,6 +32,7 @@ type MoodleAssignment = {
   intro?: string;
   duedate: number;
   cutoffdate: number;
+  allowsubmissionsfromdate?: number;
 };
 
 type MoodleAssignmentsPayload = {
@@ -51,27 +52,59 @@ type MoodleSubmissionStatus = {
   };
 };
 
-type MoodleCalendarPayload = {
-  events: Array<{
-    id: number;
-    name: string;
-    timestart: number;
-    timeduration: number;
-    description?: string;
-    url?: string;
-    modulename?: string;
-    instance?: number;
-    courseid?: number;
-  }>;
+type MoodleQuiz = {
+  id: number;
+  course: number;
+  coursemodule?: number;
+  cmid?: number;
+  name: string;
+  intro?: string;
+  timeopen: number;
+  timeclose: number;
+};
+
+type MoodleQuizzesPayload = {
+  quizzes?: MoodleQuiz[];
+};
+
+type MoodleQuizAttempt = {
+  state?: string;
+  timemodified?: number;
+  timefinish?: number;
+};
+
+type MoodleQuizAttemptsPayload = {
+  attempts?: MoodleQuizAttempt[];
+};
+
+type MoodleCalendarEvent = {
+  id: number;
+  name: string;
+  timestart: number;
+  timeduration: number;
+  description?: string;
+  url?: string;
+  modulename?: string;
+  eventtype?: string;
+  instance?: number;
+  courseid?: number;
+  course?: {
+    id?: number;
+    fullname?: string;
+    shortname?: string;
+  };
 };
 
 type AssignmentSnapshotPayload = {
   id: number;
+  sourceId: number;
+  activityType: 'assignment' | 'quiz';
   cmid: number;
   courseId: number;
   courseName: string;
   name: string;
   intro?: string;
+  openDate?: number;
   dueDate: number;
   cutoffDate: number;
   status: 'pending' | 'submitted' | 'overdue' | 'unknown';
@@ -89,6 +122,19 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const functionAuthKey = Deno.env.get('FUNCTION_AUTH_KEY') ?? '';
 const acceptedAuthTokens = [serviceRoleKey, functionAuthKey].filter((token) => token.length > 0);
+const QUIZ_TASK_ID_OFFSET = 2_000_000_000;
+const ATTENDANCE_KEYWORDS = [
+  'absensi',
+  'presensi',
+  'attendance',
+  'kehadiran',
+  'daftar hadir',
+  'daftar kehadiran',
+  'check in',
+  'check-in',
+];
+const ATTENDANCE_MODULE_NAMES = new Set(['attendance', 'mod_attendance']);
+const ATTENDANCE_URL_HINTS = ['/mod/attendance/', '/attendance/view.php'];
 
 const jakartaDateFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Jakarta',
@@ -96,9 +142,32 @@ const jakartaDateFormatter = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 });
+const jakartaTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Jakarta',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
 
 function toJakartaDateKey(date: Date): string {
   return jakartaDateFormatter.format(date);
+}
+
+function getJakartaMinutes(date: Date): number {
+  const parts = jakartaTimeFormatter.formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
+
+  return hour * 60 + minute;
+}
+
+function buildJakartaDateTime(date: Date, minutes: number): Date {
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  const hourText = String(hour).padStart(2, '0');
+  const minuteText = String(minute).padStart(2, '0');
+
+  return new Date(`${toJakartaDateKey(date)}T${hourText}:${minuteText}:00+07:00`);
 }
 
 function parseTimeToMinutes(value: string): number | null {
@@ -124,7 +193,7 @@ function inDoNotDisturbWindow(now: Date, settings: UserSettingsRow): boolean {
     return false;
   }
 
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowMinutes = getJakartaMinutes(now);
 
   if (startMinutes < endMinutes) {
     return nowMinutes >= startMinutes && nowMinutes < endMinutes;
@@ -141,11 +210,10 @@ function nextDoNotDisturbEnd(now: Date, settings: UserSettingsRow): Date {
     return fallback;
   }
 
-  const next = new Date(now);
-  next.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
+  let next = buildJakartaDateTime(now, endMinutes);
 
   if (next.getTime() <= now.getTime()) {
-    next.setDate(next.getDate() + 1);
+    next = new Date(next.getTime() + 24 * 60 * 60 * 1000);
   }
 
   return next;
@@ -255,6 +323,363 @@ function mapSubmissionStatus(
   return 'unknown';
 }
 
+function buildTaskId(activityType: 'assignment' | 'quiz', sourceId: number): number {
+  return activityType === 'quiz' ? QUIZ_TASK_ID_OFFSET + sourceId : sourceId;
+}
+
+function stripHtml(value: string | undefined): string {
+  return (value ?? '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeText(value: string | undefined): string {
+  return stripHtml(value).toLowerCase();
+}
+
+function normalizeUrl(value: string | undefined): string {
+  return normalizeText(value).replace(/#.*$/, '');
+}
+
+function isAttendanceEvent(event: MoodleCalendarEvent): boolean {
+  const moduleName = normalizeText(event.modulename);
+  if (ATTENDANCE_MODULE_NAMES.has(moduleName)) {
+    return true;
+  }
+
+  const eventType = normalizeText(event.eventtype);
+  if (eventType.includes('attendance') || eventType.includes('presensi') || eventType.includes('absensi')) {
+    return true;
+  }
+
+  const eventUrl = normalizeUrl(event.url);
+  if (ATTENDANCE_URL_HINTS.some((hint) => eventUrl.includes(hint))) {
+    return true;
+  }
+
+  const targetText = normalizeText(
+    `${event.name} ${event.description ?? ''} ${event.course?.fullname ?? ''} ${event.course?.shortname ?? ''}`
+  );
+
+  return ATTENDANCE_KEYWORDS.some((keyword) => targetText.includes(keyword));
+}
+
+function toCalendarEventArray(value: unknown): MoodleCalendarEvent[] {
+  const rawEvents = Array.isArray(value)
+    ? value
+    : value && typeof value === 'object'
+      ? Object.values(value as Record<string, unknown>)
+      : [];
+
+  return rawEvents.flatMap((event) => {
+    if (!event || typeof event !== 'object') {
+      return [];
+    }
+
+    const raw = event as Partial<MoodleCalendarEvent> & { id?: unknown; timestart?: unknown };
+    const rawCourse =
+      raw.course && typeof raw.course === 'object' ? (raw.course as Record<string, unknown>) : undefined;
+    const id = typeof raw.id === 'number' ? raw.id : Number(raw.id);
+    const timestart = typeof raw.timestart === 'number' ? raw.timestart : Number(raw.timestart);
+
+    if (!Number.isFinite(id) || !Number.isFinite(timestart)) {
+      return [];
+    }
+
+    return [
+      {
+        ...raw,
+        id,
+        name: stripHtml(raw.name) || `Event #${id}`,
+        description: stripHtml(raw.description) || undefined,
+        timestart,
+        timeduration:
+          typeof raw.timeduration === 'number' ? raw.timeduration : Number(raw.timeduration ?? 0),
+        courseid:
+          typeof raw.courseid === 'number'
+            ? raw.courseid
+            : raw.courseid !== undefined
+              ? Number(raw.courseid)
+              : rawCourse && rawCourse.id !== undefined
+                ? Number(rawCourse.id)
+                : undefined,
+        instance:
+          typeof raw.instance === 'number'
+            ? raw.instance
+            : raw.instance !== undefined
+              ? Number(raw.instance)
+              : undefined,
+      } as MoodleCalendarEvent,
+    ];
+  });
+}
+
+function extractActionEventsFromPayload(payload: unknown): MoodleCalendarEvent[] {
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+
+  const parsed = payload as Record<string, unknown>;
+  const directEvents = toCalendarEventArray(parsed.events);
+  if (directEvents.length > 0) {
+    return directEvents;
+  }
+
+  const grouped = parsed.groupedbycourse;
+  if (Array.isArray(grouped)) {
+    return grouped.flatMap((groupedItem) => {
+      if (!groupedItem || typeof groupedItem !== 'object') {
+        return [];
+      }
+
+      return toCalendarEventArray((groupedItem as Record<string, unknown>).events);
+    });
+  }
+
+  if (grouped && typeof grouped === 'object') {
+    return Object.values(grouped as Record<string, unknown>).flatMap((groupedItem) => {
+      if (Array.isArray(groupedItem)) {
+        return toCalendarEventArray(groupedItem);
+      }
+
+      if (groupedItem && typeof groupedItem === 'object') {
+        return toCalendarEventArray((groupedItem as Record<string, unknown>).events);
+      }
+
+      return [];
+    });
+  }
+
+  return [];
+}
+
+function extractUpcomingEventsFromPayload(payload: unknown): MoodleCalendarEvent[] {
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+
+  const parsed = payload as Record<string, unknown>;
+  const directEvents = toCalendarEventArray(parsed.events);
+  if (directEvents.length > 0) {
+    return directEvents;
+  }
+
+  return Object.values(parsed).flatMap((value) => {
+    if (!value || typeof value !== 'object') {
+      return [];
+    }
+
+    return toCalendarEventArray((value as Record<string, unknown>).events);
+  });
+}
+
+function mergeCalendarEvents(
+  primaryEvents: MoodleCalendarEvent[],
+  secondaryEvents: MoodleCalendarEvent[]
+): MoodleCalendarEvent[] {
+  const mergedById = new Map<number, MoodleCalendarEvent>();
+
+  [...secondaryEvents, ...primaryEvents].forEach((event) => {
+    mergedById.set(event.id, event);
+  });
+
+  return [...mergedById.values()].sort((a, b) => a.timestart - b.timestart);
+}
+
+async function getAttendanceEvents(
+  token: string,
+  courseIds: number[],
+  now: Date,
+  pollingWindowMinutes: number
+): Promise<MoodleCalendarEvent[]> {
+  const nowUnix = Math.floor(now.getTime() / 1000);
+  const windowSeconds = pollingWindowMinutes * 60;
+  const timeStart = nowUnix - Math.max(windowSeconds, 24 * 60 * 60);
+  const timeEnd = nowUnix + windowSeconds;
+  let actionEvents: MoodleCalendarEvent[] = [];
+  let upcomingEvents: MoodleCalendarEvent[] = [];
+
+  try {
+    const actionPayload = await callMoodle<unknown>(token, 'core_calendar_get_action_events_by_courses', {
+      courseids: courseIds,
+      timesortfrom: timeStart,
+      timesortto: timeEnd,
+      limitnum: 100,
+    });
+    actionEvents = extractActionEventsFromPayload(actionPayload);
+  } catch {
+    actionEvents = [];
+  }
+
+  try {
+    const upcomingPayload = await callMoodle<unknown>(token, 'core_calendar_get_calendar_upcoming_view');
+    upcomingEvents = extractUpcomingEventsFromPayload(upcomingPayload).filter(
+      (event) => courseIds.length === 0 || !event.courseid || courseIds.includes(event.courseid)
+    );
+  } catch {
+    upcomingEvents = [];
+  }
+
+  return mergeCalendarEvents(upcomingEvents, actionEvents).filter((event) => isAttendanceEvent(event));
+}
+
+function resolveAttendanceOpenSchedule(
+  event: MoodleCalendarEvent,
+  now: Date,
+  pollingWindowMinutes: number
+): Date | null {
+  const nowMs = now.getTime();
+  const startsAtMs = event.timestart * 1000;
+  const pollingWindowMs = pollingWindowMinutes * 60 * 1000;
+  const startsWithinNextWindow = startsAtMs >= nowMs && startsAtMs <= nowMs + pollingWindowMs;
+
+  if (startsWithinNextWindow) {
+    return new Date(startsAtMs);
+  }
+
+  if (startsAtMs > nowMs) {
+    return null;
+  }
+
+  if (event.timeduration && event.timeduration > 0) {
+    const closesAtMs = startsAtMs + event.timeduration * 1000;
+    return closesAtMs > nowMs ? new Date(nowMs) : null;
+  }
+
+  return toJakartaDateKey(new Date(startsAtMs)) === toJakartaDateKey(now)
+    ? new Date(nowMs)
+    : null;
+}
+
+function toAssignmentSnapshot(courseName: string, assignment: MoodleAssignment): AssignmentSnapshotPayload {
+  return {
+    id: buildTaskId('assignment', assignment.id),
+    sourceId: assignment.id,
+    activityType: 'assignment',
+    cmid: assignment.cmid,
+    courseId: assignment.course,
+    courseName,
+    name: stripHtml(assignment.name) || `Tugas #${assignment.id}`,
+    intro: stripHtml(assignment.intro) || undefined,
+    openDate:
+      typeof assignment.allowsubmissionsfromdate === 'number' && assignment.allowsubmissionsfromdate > 0
+        ? assignment.allowsubmissionsfromdate
+        : undefined,
+    dueDate: assignment.duedate,
+    cutoffDate: assignment.cutoffdate,
+    status: 'pending',
+    quickLink: `${moodleBaseUrl}/mod/assign/view.php?id=${assignment.cmid}`,
+  };
+}
+
+function toQuizSnapshot(quiz: MoodleQuiz, courseName?: string): AssignmentSnapshotPayload {
+  const sourceId = quiz.id;
+  const cmid = quiz.cmid ?? quiz.coursemodule ?? sourceId;
+  const dueDate = quiz.timeclose > 0 ? quiz.timeclose : quiz.timeopen;
+
+  return {
+    id: buildTaskId('quiz', sourceId),
+    sourceId,
+    activityType: 'quiz',
+    cmid,
+    courseId: quiz.course,
+    courseName: courseName ?? `Matkul #${quiz.course}`,
+    name: stripHtml(quiz.name) || `Quiz #${quiz.id}`,
+    intro: stripHtml(quiz.intro) || undefined,
+    openDate: quiz.timeopen > 0 ? quiz.timeopen : undefined,
+    dueDate,
+    cutoffDate: dueDate,
+    status: mapSubmissionStatus(undefined, dueDate),
+    quickLink:
+      cmid > 0
+        ? `${moodleBaseUrl}/mod/quiz/view.php?id=${cmid}`
+        : `${moodleBaseUrl}/mod/quiz/view.php?q=${quiz.id}`,
+  };
+}
+
+async function resolveAssignmentStatus(
+  token: string,
+  assignment: AssignmentSnapshotPayload
+): Promise<Pick<AssignmentSnapshotPayload, 'status' | 'submissionModifiedAt'>> {
+  if (assignment.activityType === 'quiz') {
+    try {
+      const attemptsPayload = await callMoodle<MoodleQuizAttemptsPayload>(
+        token,
+        'mod_quiz_get_user_attempts',
+        {
+          quizid: assignment.sourceId,
+          status: 'all',
+          includepreviews: 0,
+        }
+      );
+      const attempts = attemptsPayload.attempts ?? [];
+      const states = attempts.map((attempt) => (attempt.state ?? '').toLowerCase());
+      const hasFinishedAttempt = states.some((state) => state === 'finished' || state === 'submitted');
+      const hasOverdueAttempt = states.some((state) => state === 'overdue');
+      const submissionModifiedAt = attempts.reduce((maxTimestamp, attempt) => {
+        const modifiedAt =
+          typeof attempt.timemodified === 'number' && attempt.timemodified > 0
+            ? attempt.timemodified
+            : typeof attempt.timefinish === 'number' && attempt.timefinish > 0
+              ? attempt.timefinish
+              : 0;
+
+        return modifiedAt > maxTimestamp ? modifiedAt : maxTimestamp;
+      }, 0);
+
+      if (hasFinishedAttempt) {
+        return {
+          status: 'submitted',
+          submissionModifiedAt: submissionModifiedAt || undefined,
+        };
+      }
+
+      if (hasOverdueAttempt) {
+        return {
+          status: 'overdue',
+          submissionModifiedAt: submissionModifiedAt || undefined,
+        };
+      }
+    } catch {
+      // Leave quiz status as the time-based fallback if attempts are unavailable.
+    }
+
+    return {
+      status: mapSubmissionStatus(undefined, assignment.dueDate),
+      submissionModifiedAt: undefined,
+    };
+  }
+
+  try {
+    const submission = await callMoodle<MoodleSubmissionStatus>(
+      token,
+      'mod_assign_get_submission_status',
+      {
+        assignid: assignment.sourceId,
+      }
+    );
+
+    return {
+      status: mapSubmissionStatus(
+        submission.lastattempt?.submission?.status,
+        assignment.dueDate
+      ),
+      submissionModifiedAt: submission.lastattempt?.submission?.timemodified,
+    };
+  } catch {
+    return {
+      status: assignment.status,
+      submissionModifiedAt: undefined,
+    };
+  }
+}
+
 function buildReminderDate(kind: 'deadline_h1' | 'deadline_today', dueDateUnixSeconds: number): Date {
   const dueDate = new Date(dueDateUnixSeconds * 1000);
   const target = new Date(dueDate);
@@ -348,6 +773,7 @@ Deno.serve(async (request) => {
     let usersProcessed = 0;
     let snapshotsUpserted = 0;
     let notificationsQueued = 0;
+    let attendanceEventsDetected = 0;
 
     for (const user of users) {
       const settings = resolveSettings(user);
@@ -381,45 +807,42 @@ Deno.serve(async (request) => {
         }
       );
 
-      const assignmentsRaw = assignmentsPayload.courses.flatMap((course) =>
-        course.assignments.map((assignment) => ({
-          assignment,
-          courseName: course.fullname,
-        }))
+      const courseNameById = new Map<number, string>();
+      courses.forEach((course) => {
+        courseNameById.set(course.id, course.fullname);
+      });
+      assignmentsPayload.courses.forEach((course) => {
+        courseNameById.set(course.id, course.fullname);
+      });
+
+      const assignmentSnapshots = assignmentsPayload.courses.flatMap((course) =>
+        course.assignments.map((assignment) => toAssignmentSnapshot(course.fullname, assignment))
       );
 
-      const resolvedAssignments: AssignmentSnapshotPayload[] = [];
-      for (const item of assignmentsRaw) {
-        let submission: MoodleSubmissionStatus | null = null;
-        try {
-          submission = await callMoodle<MoodleSubmissionStatus>(
-            user.moodle_token,
-            'mod_assign_get_submission_status',
-            {
-              assignid: item.assignment.id,
-            }
-          );
-        } catch {
-          submission = null;
-        }
-
-        const status = mapSubmissionStatus(
-          submission?.lastattempt?.submission?.status,
-          item.assignment.duedate
+      let quizSnapshots: AssignmentSnapshotPayload[] = [];
+      try {
+        const quizPayload = await callMoodle<MoodleQuizzesPayload>(
+          user.moodle_token,
+          'mod_quiz_get_quizzes_by_courses',
+          {
+            courseids: scopedCourseIds,
+          }
         );
 
+        quizSnapshots = (quizPayload.quizzes ?? []).map((quiz) =>
+          toQuizSnapshot(quiz, courseNameById.get(quiz.course))
+        );
+      } catch {
+        quizSnapshots = [];
+      }
+
+      const resolvedAssignments: AssignmentSnapshotPayload[] = [];
+      for (const assignment of [...assignmentSnapshots, ...quizSnapshots]) {
+        const statusInfo = await resolveAssignmentStatus(user.moodle_token, assignment);
         resolvedAssignments.push({
-          id: item.assignment.id,
-          cmid: item.assignment.cmid,
-          courseId: item.assignment.course,
-          courseName: item.courseName,
-          name: item.assignment.name,
-          intro: item.assignment.intro,
-          dueDate: item.assignment.duedate,
-          cutoffDate: item.assignment.cutoffdate,
-          status,
-          submissionModifiedAt: submission?.lastattempt?.submission?.timemodified,
-          quickLink: `${moodleBaseUrl}/mod/assign/view.php?id=${item.assignment.cmid}`,
+          ...assignment,
+          status: statusInfo.status,
+          submissionModifiedAt: statusInfo.submissionModifiedAt,
         });
       }
 
@@ -514,28 +937,25 @@ Deno.serve(async (request) => {
 
       if (settings.notify_attendance) {
         try {
-          const calendar = await callMoodle<MoodleCalendarPayload>(
+          const attendanceEvents = await getAttendanceEvents(
             user.moodle_token,
-            'core_calendar_get_action_events_by_courses',
-            {
-              courseids: scopedCourseIds,
-              limitnum: 100,
-            }
+            scopedCourseIds,
+            now,
+            settings.poll_interval_minutes
           );
-
-          const attendanceEvents = (calendar.events ?? []).filter((event) => {
-            const normalized = event.name.toLowerCase();
-            return normalized.includes('absensi') || normalized.includes('attendance');
-          });
+          attendanceEventsDetected += attendanceEvents.length;
 
           for (const event of attendanceEvents) {
-            const isWindowMatch =
-              Math.abs(event.timestart * 1000 - now.getTime()) <=
-              settings.poll_interval_minutes * 60 * 1000;
+            const startsAtMs = event.timestart * 1000;
+            const openScheduleDate = resolveAttendanceOpenSchedule(
+              event,
+              now,
+              settings.poll_interval_minutes
+            );
 
             const closesAtMs =
               event.timeduration && event.timeduration > 0
-                ? event.timestart * 1000 + event.timeduration * 1000
+                ? startsAtMs + event.timeduration * 1000
                 : null;
 
             const isClosingSoon =
@@ -543,14 +963,14 @@ Deno.serve(async (request) => {
               closesAtMs > now.getTime() &&
               closesAtMs - now.getTime() <= 30 * 60 * 1000;
 
-            if (!isWindowMatch) {
+            if (!openScheduleDate) {
               if (!isClosingSoon) {
                 continue;
               }
             }
 
-            if (isWindowMatch) {
-              const scheduleAt = applyDoNotDisturb(new Date(), settings);
+            if (openScheduleDate) {
+              const scheduleAt = applyDoNotDisturb(openScheduleDate, settings);
               queueRows.push({
                 app_user_id: user.id,
                 notification_type: 'attendance_open',
@@ -620,6 +1040,7 @@ Deno.serve(async (request) => {
             users_processed: usersProcessed,
             snapshots_upserted: snapshotsUpserted,
             notifications_queued: notificationsQueued,
+            attendance_events_detected: attendanceEventsDetected,
           },
         })
         .eq('id', runId);

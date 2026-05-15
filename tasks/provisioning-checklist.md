@@ -23,10 +23,13 @@ Dokumen ini dipakai untuk menuntaskan tasklist yang masih tergantung infrastrukt
 3. Isi env mobile:
 - EXPO_PUBLIC_SUPABASE_URL
 - EXPO_PUBLIC_SUPABASE_ANON_KEY
-4. Jalankan migration SQL berurutan di SQL Editor:
+4. Simpan secret cron ke Supabase Vault:
+- `project_url`: `https://<project-ref>.supabase.co`
+- `function_auth_key`: token internal yang juga dipasang sebagai secret Edge Functions `FUNCTION_AUTH_KEY`
+5. Jalankan migration SQL berurutan di SQL Editor atau `npx supabase db push`:
 - supabase/migrations/20260420_0001_init.sql
-- supabase/migrations/20260421_0002_cron.sql (setelah placeholder diisi)
-5. Deploy edge functions:
+- migration cron terbaru di `supabase/migrations` yang membaca secret dari Vault
+6. Deploy edge functions:
 - poll-sunan-data
 - send-push
 - daily-reminder
@@ -65,12 +68,10 @@ Dokumen ini dipakai untuk menuntaskan tasklist yang masih tergantung infrastrukt
 - URL function dan bearer key sudah final
 
 ### Langkah
-1. Buka file supabase/migrations/20260421_0002_cron.sql.
-2. Ganti placeholder:
-- SUPABASE_FUNCTION_BASE_URL
-- FUNCTION_AUTH_KEY (token internal yang juga dipasang sebagai secret Edge Functions)
-3. Jalankan script cron SQL di Supabase SQL Editor.
-4. Pastikan extension cron/net aktif (sesuai ketersediaan project Supabase).
+1. Pastikan secret `project_url` dan `function_auth_key` sudah ada di Supabase Vault.
+2. Pastikan `FUNCTION_AUTH_KEY` dengan nilai yang sama sudah dipasang sebagai secret Edge Functions.
+3. Jalankan migration cron terbaru.
+4. Pastikan extension cron/net/vault aktif (sesuai ketersediaan project Supabase).
 
 ### Verifikasi
 - Job cron tercatat di cron.job

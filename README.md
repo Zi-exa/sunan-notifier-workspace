@@ -91,11 +91,13 @@ Sprint 4:
    - SUPABASE_URL
    - SUPABASE_SERVICE_ROLE_KEY
    - MOODLE_BASE_URL
-    - FCM_SERVICE_ACCOUNT_JSON (direkomendasikan untuk FCM HTTP v1)
-    - FCM_SERVER_KEY (opsional fallback legacy)
+   - FCM_SERVICE_ACCOUNT_JSON (direkomendasikan untuk FCM HTTP v1)
+   - FCM_SERVER_KEY (opsional fallback legacy)
    - FUNCTION_AUTH_KEY (disarankan untuk auth internal antar cron/function)
 
-4. Update placeholder URL dan bearer key pada file cron SQL sebelum eksekusi.
+4. Simpan secret cron ke Supabase Vault sebelum menjalankan migration cron terbaru:
+   - `project_url`: `https://<project-ref>.supabase.co`
+   - `function_auth_key`: nilai yang sama dengan secret Edge Function `FUNCTION_AUTH_KEY`
 
 ## Catatan Penting
 

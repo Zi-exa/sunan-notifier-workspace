@@ -47,4 +47,4 @@ Untuk delivery FCM:
    - supabase functions deploy send-push
    - supabase functions deploy daily-reminder
    - supabase functions deploy mobile-data
-3. Buat pg_cron jobs berdasarkan file supabase/migrations/20260421_0002_cron.sql
+3. Simpan `project_url` dan `function_auth_key` di Supabase Vault, lalu jalankan migration cron terbaru

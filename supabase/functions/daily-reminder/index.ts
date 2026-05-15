@@ -46,9 +46,32 @@ const jakartaDateFormatter = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 });
+const jakartaTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Jakarta',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
 
 function toJakartaDateKey(date: Date): string {
   return jakartaDateFormatter.format(date);
+}
+
+function getJakartaMinutes(date: Date): number {
+  const parts = jakartaTimeFormatter.formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
+  const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
+
+  return hour * 60 + minute;
+}
+
+function buildJakartaDateTime(date: Date, minutes: number): Date {
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  const hourText = String(hour).padStart(2, '0');
+  const minuteText = String(minute).padStart(2, '0');
+
+  return new Date(`${toJakartaDateKey(date)}T${hourText}:${minuteText}:00+07:00`);
 }
 
 function parseTimeToMinutes(value: string): number | null {
@@ -74,7 +97,7 @@ function inDoNotDisturb(now: Date, dndStart: string, dndEnd: string): boolean {
     return false;
   }
 
-  const current = now.getHours() * 60 + now.getMinutes();
+  const current = getJakartaMinutes(now);
   if (start < end) {
     return current >= start && current < end;
   }
@@ -88,11 +111,10 @@ function getNextDndEnd(now: Date, dndEnd: string): Date {
     return now;
   }
 
-  const next = new Date(now);
-  next.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  let next = buildJakartaDateTime(now, minutes);
 
   if (next.getTime() <= now.getTime()) {
-    next.setDate(next.getDate() + 1);
+    next = new Date(next.getTime() + 24 * 60 * 60 * 1000);
   }
 
   return next;

@@ -51,3 +51,8 @@
 ## Working Agreement
 
 - Read and follow this `AGENTS.md` before making changes.
+
+root  ::= think code
+think ::= "<think>\n" "GOAL: " line "APPROACH: " line "EDGE: " line "</think>\n\n"
+line  ::= [^\n]+ "\n"
+code  ::= [\x09\x0A\x0D\x20-\x7E]+
