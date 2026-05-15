@@ -3216,8 +3216,22 @@ Tanggal: 2026-04-20
 
 ## Plan (Push Workspace dan Jadikan Repo Publik - 2026-05-16)
 
-- [ ] 1. Audit remote GitHub dan visibilitas repo `sunan-notifier-workspace` serta `sunan-notifier-mobile`
-- [ ] 2. Audit perubahan lokal dan file untracked agar tidak ada secret/artefak lokal yang ikut dipublish
-- [ ] 3. Commit dan push perubahan workspace yang relevan ke GitHub
-- [ ] 4. Ubah repo yang diminta menjadi public dan verifikasi visibilitas akhir
-- [ ] 5. Catat hasil publikasi dan sisa risiko bila ada file yang sengaja tidak dipush
+- [x] 1. Audit remote GitHub dan visibilitas repo `sunan-notifier-workspace` serta `sunan-notifier-mobile`
+- [x] 2. Audit perubahan lokal dan file untracked agar tidak ada secret/artefak lokal yang ikut dipublish
+- [x] 3. Commit dan push perubahan workspace yang relevan ke GitHub
+- [x] 4. Ubah repo yang diminta menjadi public dan verifikasi visibilitas akhir
+- [x] 5. Catat hasil publikasi dan sisa risiko bila ada file yang sengaja tidak dipush
+
+## Review Addendum (Push Workspace dan Jadikan Repo Publik - 2026-05-16)
+
+- Repo workspace `Zi-exa/sunan-notifier-workspace` sudah dipush ke branch `master` dengan commit `71ca8ff fix: repair notification reminders and publish docs`.
+- Repo source mobile `Zi-exa/sunan-notifier-mobile` sudah berada di commit terbaru `7a5c3a9 fix: clarify monitored course scope setting` dan branch `master` bersih.
+- Visibility GitHub sudah diverifikasi:
+  - `Zi-exa/sunan-notifier-workspace`: `PUBLIC`, `isPrivate=false`
+  - `Zi-exa/sunan-notifier-mobile`: `PUBLIC`, `isPrivate=false`
+  - `Zi-exa/sunan-notifier-releases`: tetap `PUBLIC`
+- Folder untracked `reports/` tidak ikut dipush karena berisi artefak laporan/gambar lokal yang tidak diperlukan untuk rilis source.
+- Verifikasi akhir:
+  - `git status --short` di root hanya menyisakan `?? reports/`
+  - `git -C mobile status --short` bersih
+  - `gh repo view ... --json visibility,isPrivate,url` mengonfirmasi repo workspace, mobile, dan releases public.
