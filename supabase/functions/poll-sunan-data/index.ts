@@ -4,6 +4,7 @@ type UserSettingsRow = {
   notify_new_task: boolean;
   notify_deadline_h1: boolean;
   notify_deadline_today: boolean;
+  notify_task_open: boolean;
   notify_attendance: boolean;
   poll_interval_minutes: number;
   dnd_start: string;
@@ -232,6 +233,7 @@ function resolveSettings(record: UserRow): UserSettingsRow {
     notify_new_task: true,
     notify_deadline_h1: true,
     notify_deadline_today: true,
+    notify_task_open: true,
     notify_attendance: true,
     poll_interval_minutes: 15,
     dnd_start: '22:00',
@@ -698,6 +700,18 @@ function buildReminderDate(kind: 'deadline_h1' | 'deadline_today', dueDateUnixSe
   return reminderDate;
 }
 
+function buildTaskClosingReminderDate(dueDateUnixSeconds: number, now: Date): Date | null {
+  const dueDateMs = dueDateUnixSeconds * 1000;
+  const nowMs = now.getTime();
+
+  if (!Number.isFinite(dueDateMs) || dueDateMs <= nowMs) {
+    return null;
+  }
+
+  const thirtyMinutesBeforeDue = dueDateMs - 30 * 60 * 1000;
+  return new Date(Math.max(thirtyMinutesBeforeDue, nowMs));
+}
+
 function isDueOnTomorrowJakarta(dueDateUnixSeconds: number, now: Date): boolean {
   const dueKey = toJakartaDateKey(new Date(dueDateUnixSeconds * 1000));
   const tomorrow = new Date(now);
@@ -762,7 +776,7 @@ Deno.serve(async (request) => {
     const usersResult = await supabase
       .from('app_users')
       .select(
-        'id,moodle_user_id,moodle_token,user_settings(notify_new_task,notify_deadline_h1,notify_deadline_today,notify_attendance,poll_interval_minutes,dnd_start,dnd_end,monitored_course_ids)'
+        'id,moodle_user_id,moodle_token,user_settings(notify_new_task,notify_deadline_h1,notify_deadline_today,notify_task_open,notify_attendance,poll_interval_minutes,dnd_start,dnd_end,monitored_course_ids)'
       );
 
     if (usersResult.error) {
@@ -930,6 +944,22 @@ Deno.serve(async (request) => {
               },
               dedupe_key: `today-${user.id}-${assignment.id}-${toJakartaDateKey(now)}`,
               schedule_at: reminderDate.toISOString(),
+            });
+          }
+
+          const closingReminderDate = buildTaskClosingReminderDate(assignment.dueDate, now);
+          if (closingReminderDate) {
+            queueRows.push({
+              app_user_id: user.id,
+              notification_type: 'task_closing',
+              title: 'Tugas Hampir Deadline',
+              body: `${assignment.name} deadline kurang dari 30 menit lagi.`,
+              payload: {
+                taskId: assignment.id,
+                kind: 'task_closing',
+              },
+              dedupe_key: `closing-${user.id}-${assignment.id}-${assignment.dueDate}`,
+              schedule_at: closingReminderDate.toISOString(),
             });
           }
         }

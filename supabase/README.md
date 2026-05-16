@@ -30,8 +30,9 @@ Folder ini berisi artefak backend untuk SUNAN Notifier.
 
 Catatan auth internal:
 - Endpoint function saat ini mendukung validasi menggunakan `SUPABASE_SERVICE_ROLE_KEY` atau `FUNCTION_AUTH_KEY`.
-- Untuk cron, direkomendasikan gunakan `FUNCTION_AUTH_KEY` agar tidak tergantung rotasi service role key.
-- Cron terbaru membaca `project_url` dan `function_auth_key` dari Supabase Vault; jangan jalankan job dengan placeholder `Bearer <FUNCTION_AUTH_KEY>`.
+- Karena Edge Function masih memakai verifikasi JWT Supabase, cron harus mengirim token JWT yang valid.
+- Cron terbaru membaca `project_url` dan `function_auth_key` dari Supabase Vault; isi `function_auth_key` dengan service-role JWT atau token JWT valid lain yang juga diterima function.
+- Jangan jalankan job dengan placeholder `Bearer <FUNCTION_AUTH_KEY>`.
 
 Catatan Data API grants:
 - Mobile tidak boleh akses tabel `public` langsung; gunakan Edge Function.

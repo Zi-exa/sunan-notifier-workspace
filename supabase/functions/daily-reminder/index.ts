@@ -124,6 +124,18 @@ function scheduleAtSevenJakarta(targetDateKey: string): Date {
   return new Date(`${targetDateKey}T07:00:00+07:00`);
 }
 
+function buildTaskClosingReminderDate(dueDateUnixSeconds: number, now: Date): Date | null {
+  const dueDateMs = dueDateUnixSeconds * 1000;
+  const nowMs = now.getTime();
+
+  if (!Number.isFinite(dueDateMs) || dueDateMs <= nowMs) {
+    return null;
+  }
+
+  const thirtyMinutesBeforeDue = dueDateMs - 30 * 60 * 1000;
+  return new Date(Math.max(thirtyMinutesBeforeDue, nowMs));
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -230,6 +242,24 @@ Deno.serve(async (request) => {
           dedupe_key: `daily-today-${snapshot.app_user_id}-${snapshot.assignment_id}-${todayKey}`,
           schedule_at: scheduleAt.toISOString(),
         });
+      }
+
+      if (settings.notify_deadline_today) {
+        const closingReminderDate = buildTaskClosingReminderDate(dueDateUnix, now);
+        if (closingReminderDate) {
+          queueRows.push({
+            app_user_id: snapshot.app_user_id,
+            notification_type: 'task_closing',
+            title: 'Tugas Hampir Deadline',
+            body: `${snapshot.payload.name} deadline kurang dari 30 menit lagi.`,
+            payload: {
+              taskId: snapshot.assignment_id,
+              kind: 'task_closing',
+            },
+            dedupe_key: `closing-${snapshot.app_user_id}-${snapshot.assignment_id}-${dueDateUnix}`,
+            schedule_at: closingReminderDate.toISOString(),
+          });
+        }
       }
     }
 

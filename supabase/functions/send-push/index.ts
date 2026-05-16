@@ -381,6 +381,7 @@ Deno.serve(async (request) => {
       .from('notification_queue')
       .select('id,app_user_id,title,body,payload')
       .is('sent_at', null)
+      .is('failed_reason', null)
       .lte('schedule_at', new Date().toISOString())
       .order('schedule_at', { ascending: true })
       .limit(100);
