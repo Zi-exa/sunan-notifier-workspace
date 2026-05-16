@@ -8,7 +8,7 @@ Project ini bukan aplikasi resmi UMK. Repo ini adalah workspace publik yang meng
 
 - Workspace: [Zi-exa/sunan-notifier-workspace](https://github.com/Zi-exa/sunan-notifier-workspace)
 - Source mobile: [Zi-exa/sunan-notifier-mobile](https://github.com/Zi-exa/sunan-notifier-mobile)
-- Download APK terbaru: [app-release.apk](https://github.com/Zi-exa/sunan-notifier-releases/releases/download/v1.0.1/app-release.apk)
+- Download APK terbaru v1.0.1: [app-release.apk](https://github.com/Zi-exa/sunan-notifier-releases/releases/download/v1.0.1/app-release.apk)
 
 ## Fitur
 
@@ -156,7 +156,7 @@ APK publik disimpan di repo rilis, bukan di repo source mobile:
 https://github.com/Zi-exa/sunan-notifier-releases
 ```
 
-Gunakan satu asset APK saja untuk setiap rilis: `app-release.apk`.
+Gunakan satu asset APK saja untuk setiap rilis: `app-release.apk`. Versinya mengikuti tag GitHub Release, misalnya `v1.0.1`.
 
 Untuk rilis baru, ganti asset `app-release.apk` di GitHub Release terkait. Jangan upload file APK dengan nama alternatif seperti `SUNAN-Notifier-vX-buildY.apk`, supaya link download dan update manual tetap konsisten.
 
