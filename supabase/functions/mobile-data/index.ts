@@ -16,8 +16,6 @@ type UserSettingsInput = {
   notifyTaskOpen: boolean;
   notifyAttendance: boolean;
   pollIntervalMinutes: 15 | 30 | 60;
-  dndStart: string;
-  dndEnd: string;
   monitoredCourseIds: number[];
 };
 
@@ -135,8 +133,6 @@ function toRemoteUserSettings(data: Record<string, unknown>, includeNotifyTaskOp
     notifyTaskOpen: includeNotifyTaskOpen ? Boolean(data.notify_task_open) : undefined,
     notifyAttendance: Boolean(data.notify_attendance),
     pollIntervalMinutes: Number(data.poll_interval_minutes) as 15 | 30 | 60,
-    dndStart: typeof data.dnd_start === 'string' ? data.dnd_start : '22:00',
-    dndEnd: typeof data.dnd_end === 'string' ? data.dnd_end : '07:00',
     monitoredCourseIds: normalizeMonitoredCourseIds(data.monitored_course_ids),
   };
 }
@@ -269,7 +265,7 @@ Deno.serve(async (request) => {
       const { data, error } = await supabase
         .from('user_settings')
         .select(
-          'notify_new_task,notify_deadline_h1,notify_deadline_today,notify_task_open,notify_attendance,poll_interval_minutes,dnd_start,dnd_end,monitored_course_ids'
+          'notify_new_task,notify_deadline_h1,notify_deadline_today,notify_task_open,notify_attendance,poll_interval_minutes,monitored_course_ids'
         )
         .eq('app_user_id', appUser.id)
         .maybeSingle();
@@ -278,7 +274,7 @@ Deno.serve(async (request) => {
         const { data: legacyData, error: legacyError } = await supabase
           .from('user_settings')
           .select(
-            'notify_new_task,notify_deadline_h1,notify_deadline_today,notify_attendance,poll_interval_minutes,dnd_start,dnd_end,monitored_course_ids'
+            'notify_new_task,notify_deadline_h1,notify_deadline_today,notify_attendance,poll_interval_minutes,monitored_course_ids'
           )
           .eq('app_user_id', appUser.id)
           .maybeSingle();
@@ -321,8 +317,6 @@ Deno.serve(async (request) => {
         notify_deadline_today: settings.notifyDeadlineToday,
         notify_attendance: settings.notifyAttendance,
         poll_interval_minutes: settings.pollIntervalMinutes,
-        dnd_start: settings.dndStart,
-        dnd_end: settings.dndEnd,
         monitored_course_ids: settings.monitoredCourseIds,
         updated_at: new Date().toISOString(),
       };

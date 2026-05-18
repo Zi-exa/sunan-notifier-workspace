@@ -7,8 +7,6 @@ type UserSettingsRow = {
   notify_task_open: boolean;
   notify_attendance: boolean;
   poll_interval_minutes: number;
-  dnd_start: string;
-  dnd_end: string;
   monitored_course_ids: number[];
 };
 
@@ -143,89 +141,9 @@ const jakartaDateFormatter = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 });
-const jakartaTimeFormatter = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Asia/Jakarta',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-});
 
 function toJakartaDateKey(date: Date): string {
   return jakartaDateFormatter.format(date);
-}
-
-function getJakartaMinutes(date: Date): number {
-  const parts = jakartaTimeFormatter.formatToParts(date);
-  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
-  const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
-
-  return hour * 60 + minute;
-}
-
-function buildJakartaDateTime(date: Date, minutes: number): Date {
-  const hour = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  const hourText = String(hour).padStart(2, '0');
-  const minuteText = String(minute).padStart(2, '0');
-
-  return new Date(`${toJakartaDateKey(date)}T${hourText}:${minuteText}:00+07:00`);
-}
-
-function parseTimeToMinutes(value: string): number | null {
-  const [hourRaw, minuteRaw] = value.split(':');
-  const hour = Number(hourRaw);
-  const minute = Number(minuteRaw);
-
-  if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
-    return null;
-  }
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-    return null;
-  }
-
-  return hour * 60 + minute;
-}
-
-function inDoNotDisturbWindow(now: Date, settings: UserSettingsRow): boolean {
-  const startMinutes = parseTimeToMinutes(settings.dnd_start);
-  const endMinutes = parseTimeToMinutes(settings.dnd_end);
-
-  if (startMinutes === null || endMinutes === null || startMinutes === endMinutes) {
-    return false;
-  }
-
-  const nowMinutes = getJakartaMinutes(now);
-
-  if (startMinutes < endMinutes) {
-    return nowMinutes >= startMinutes && nowMinutes < endMinutes;
-  }
-
-  return nowMinutes >= startMinutes || nowMinutes < endMinutes;
-}
-
-function nextDoNotDisturbEnd(now: Date, settings: UserSettingsRow): Date {
-  const fallback = new Date(now.getTime() + 30 * 60 * 1000);
-  const endMinutes = parseTimeToMinutes(settings.dnd_end);
-
-  if (endMinutes === null) {
-    return fallback;
-  }
-
-  let next = buildJakartaDateTime(now, endMinutes);
-
-  if (next.getTime() <= now.getTime()) {
-    next = new Date(next.getTime() + 24 * 60 * 60 * 1000);
-  }
-
-  return next;
-}
-
-function applyDoNotDisturb(scheduleDate: Date, settings: UserSettingsRow): Date {
-  if (!inDoNotDisturbWindow(scheduleDate, settings)) {
-    return scheduleDate;
-  }
-
-  return nextDoNotDisturbEnd(scheduleDate, settings);
 }
 
 function resolveSettings(record: UserRow): UserSettingsRow {
@@ -236,8 +154,6 @@ function resolveSettings(record: UserRow): UserSettingsRow {
     notify_task_open: true,
     notify_attendance: true,
     poll_interval_minutes: 15,
-    dnd_start: '22:00',
-    dnd_end: '07:00',
     monitored_course_ids: [],
   };
 
@@ -776,7 +692,7 @@ Deno.serve(async (request) => {
     const usersResult = await supabase
       .from('app_users')
       .select(
-        'id,moodle_user_id,moodle_token,user_settings(notify_new_task,notify_deadline_h1,notify_deadline_today,notify_task_open,notify_attendance,poll_interval_minutes,dnd_start,dnd_end,monitored_course_ids)'
+        'id,moodle_user_id,moodle_token,user_settings(notify_new_task,notify_deadline_h1,notify_deadline_today,notify_task_open,notify_attendance,poll_interval_minutes,monitored_course_ids)'
       );
 
     if (usersResult.error) {
@@ -891,7 +807,7 @@ Deno.serve(async (request) => {
         const previousHash = existingMap.get(assignment.id);
 
         if (!previousHash && settings.notify_new_task) {
-          const scheduleAt = applyDoNotDisturb(new Date(), settings);
+          const scheduleAt = new Date();
           queueRows.push({
             app_user_id: user.id,
             notification_type: 'new_task',
@@ -908,10 +824,7 @@ Deno.serve(async (request) => {
 
         if (assignment.status !== 'submitted' && settings.notify_deadline_h1) {
           if (isDueOnTomorrowJakarta(assignment.dueDate, now)) {
-            const reminderDate = applyDoNotDisturb(
-              buildReminderDate('deadline_h1', assignment.dueDate),
-              settings
-            );
+            const reminderDate = buildReminderDate('deadline_h1', assignment.dueDate);
             queueRows.push({
               app_user_id: user.id,
               notification_type: 'deadline_h1',
@@ -929,10 +842,7 @@ Deno.serve(async (request) => {
 
         if (assignment.status !== 'submitted' && settings.notify_deadline_today) {
           if (isDueTodayJakarta(assignment.dueDate, now)) {
-            const reminderDate = applyDoNotDisturb(
-              buildReminderDate('deadline_today', assignment.dueDate),
-              settings
-            );
+            const reminderDate = buildReminderDate('deadline_today', assignment.dueDate);
             queueRows.push({
               app_user_id: user.id,
               notification_type: 'deadline_today',
@@ -1000,7 +910,6 @@ Deno.serve(async (request) => {
             }
 
             if (openScheduleDate) {
-              const scheduleAt = applyDoNotDisturb(openScheduleDate, settings);
               queueRows.push({
                 app_user_id: user.id,
                 notification_type: 'attendance_open',
@@ -1011,12 +920,12 @@ Deno.serve(async (request) => {
                   kind: 'attendance_open',
                 },
                 dedupe_key: `attendance-open-${user.id}-${event.id}`,
-                schedule_at: scheduleAt.toISOString(),
+                schedule_at: openScheduleDate.toISOString(),
               });
             }
 
             if (isClosingSoon) {
-              const scheduleAt = applyDoNotDisturb(new Date(), settings);
+              const scheduleAt = new Date();
               queueRows.push({
                 app_user_id: user.id,
                 notification_type: 'attendance_closing',

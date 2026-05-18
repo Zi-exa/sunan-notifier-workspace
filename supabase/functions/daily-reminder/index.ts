@@ -25,8 +25,6 @@ type SettingsRow = {
   app_user_id: string;
   notify_deadline_h1: boolean;
   notify_deadline_today: boolean;
-  dnd_start: string;
-  dnd_end: string;
 };
 
 type SnapshotRow = {
@@ -46,78 +44,9 @@ const jakartaDateFormatter = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 });
-const jakartaTimeFormatter = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Asia/Jakarta',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-});
 
 function toJakartaDateKey(date: Date): string {
   return jakartaDateFormatter.format(date);
-}
-
-function getJakartaMinutes(date: Date): number {
-  const parts = jakartaTimeFormatter.formatToParts(date);
-  const hour = Number(parts.find((part) => part.type === 'hour')?.value ?? 0);
-  const minute = Number(parts.find((part) => part.type === 'minute')?.value ?? 0);
-
-  return hour * 60 + minute;
-}
-
-function buildJakartaDateTime(date: Date, minutes: number): Date {
-  const hour = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  const hourText = String(hour).padStart(2, '0');
-  const minuteText = String(minute).padStart(2, '0');
-
-  return new Date(`${toJakartaDateKey(date)}T${hourText}:${minuteText}:00+07:00`);
-}
-
-function parseTimeToMinutes(value: string): number | null {
-  const [hourRaw, minuteRaw] = value.split(':');
-  const hour = Number(hourRaw);
-  const minute = Number(minuteRaw);
-
-  if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
-    return null;
-  }
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-    return null;
-  }
-
-  return hour * 60 + minute;
-}
-
-function inDoNotDisturb(now: Date, dndStart: string, dndEnd: string): boolean {
-  const start = parseTimeToMinutes(dndStart);
-  const end = parseTimeToMinutes(dndEnd);
-
-  if (start === null || end === null || start === end) {
-    return false;
-  }
-
-  const current = getJakartaMinutes(now);
-  if (start < end) {
-    return current >= start && current < end;
-  }
-
-  return current >= start || current < end;
-}
-
-function getNextDndEnd(now: Date, dndEnd: string): Date {
-  const minutes = parseTimeToMinutes(dndEnd);
-  if (minutes === null) {
-    return now;
-  }
-
-  let next = buildJakartaDateTime(now, minutes);
-
-  if (next.getTime() <= now.getTime()) {
-    next = new Date(next.getTime() + 24 * 60 * 60 * 1000);
-  }
-
-  return next;
 }
 
 function scheduleAtSevenJakarta(targetDateKey: string): Date {
@@ -155,7 +84,7 @@ Deno.serve(async (request) => {
   try {
     const settingsResult = await supabase
       .from('user_settings')
-      .select('app_user_id,notify_deadline_h1,notify_deadline_today,dnd_start,dnd_end');
+      .select('app_user_id,notify_deadline_h1,notify_deadline_today');
 
     if (settingsResult.error) {
       throw new Error(settingsResult.error.message);
@@ -202,10 +131,7 @@ Deno.serve(async (request) => {
       const dueDateKey = toJakartaDateKey(new Date(dueDateUnix * 1000));
 
       if (settings.notify_deadline_h1 && dueDateKey === tomorrowKey) {
-        let scheduleAt = scheduleAtSevenJakarta(todayKey);
-        if (inDoNotDisturb(scheduleAt, settings.dnd_start, settings.dnd_end)) {
-          scheduleAt = getNextDndEnd(scheduleAt, settings.dnd_end);
-        }
+        const scheduleAt = scheduleAtSevenJakarta(todayKey);
 
         queueRows.push({
           app_user_id: snapshot.app_user_id,
@@ -225,9 +151,6 @@ Deno.serve(async (request) => {
         let scheduleAt = scheduleAtSevenJakarta(todayKey);
         if (scheduleAt.getTime() < now.getTime()) {
           scheduleAt = now;
-        }
-        if (inDoNotDisturb(scheduleAt, settings.dnd_start, settings.dnd_end)) {
-          scheduleAt = getNextDndEnd(scheduleAt, settings.dnd_end);
         }
 
         queueRows.push({

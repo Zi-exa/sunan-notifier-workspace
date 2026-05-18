@@ -18,7 +18,7 @@ Project ini bukan aplikasi resmi UMK. Repo ini adalah workspace publik yang meng
 - Monitoring absensi dari Upcoming Events SUNAN.
 - Kalender akademik dari event Moodle.
 - Notifikasi lokal dan push untuk tugas baru, tugas dibuka, deadline, dan absensi.
-- Pengaturan notifikasi, jam hening, tema, dan mata kuliah yang dipantau.
+- Pengaturan notifikasi, tema, dan mata kuliah yang dipantau.
 - Dukungan EAS Update untuk patch JavaScript dan rilis APK manual lewat GitHub Release.
 
 ## Struktur Repo
