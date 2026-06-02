@@ -1,5 +1,13 @@
 # Todo
 
+## 2026-06-02 - Pilihan simpan kredensial di login
+
+- [x] Audit flow login dan penyimpanan kredensial yang aktif saat ini.
+- [x] Ubah login agar simpan NIM/password menjadi pilihan eksplisit user.
+- [x] Tampilkan sugest akun tersimpan hanya saat opsi simpan aktif.
+- [x] Verifikasi lint dan typecheck setelah perubahan.
+- [x] Tulis ringkasan review hasil perubahan.
+
 ## 2026-06-02 - Batalkan APK kedua, jadikan APK utama tanpa mark
 
 - [x] Audit perubahan sementara dari percobaan varian APK kedua.
@@ -17,6 +25,12 @@
 
 ## Review
 
+- Flow login tidak lagi mengisi NIM/password otomatis dari kredensial tersimpan.
+- User sekarang memilih eksplisit apakah akun ingin disimpan di perangkat. Jika opsi dimatikan, kredensial tersimpan langsung dihapus dari perangkat.
+- Sugest akun tersimpan hanya muncul saat opsi simpan aktif dan memang ada kredensial yang pernah disimpan.
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
 - Varian APK kedua dibatalkan atas arahan user. Jalur yang tersisa harus kembali sederhana: satu APK utama, tanpa mark di Pengaturan, tanpa pemisahan package/channel tambahan.
 - Perubahan final yang dipertahankan hanya:
   - hapus mark proyek dari `Pengaturan > About` pada APK utama
