@@ -1,5 +1,13 @@
 # Todo
 
+## 2026-06-02 - Rapikan flow simpan akun di login
+
+- [x] Audit ulang flow pilihan simpan akun setelah koreksi user.
+- [x] Ubah prompt agar hilang setelah user memilih Ya/Tidak.
+- [x] Tampilkan sugest akun tersimpan hanya setelah kolom login disentuh.
+- [x] Verifikasi lint dan typecheck setelah perubahan.
+- [x] Tulis ringkasan review hasil perbaikan.
+
 ## 2026-06-02 - Pilihan simpan kredensial di login
 
 - [x] Audit flow login dan penyimpanan kredensial yang aktif saat ini.
@@ -25,6 +33,12 @@
 
 ## Review
 
+- Prompt pilihan simpan akun sekarang hanya tampil sampai user memilih `Ya` atau `Tidak`, lalu langsung hilang.
+- Sugest akun tersimpan tidak muncul otomatis lagi; sekarang baru muncul setelah user menyentuh kolom NIM atau password.
+- Preferensi simpan akun sekarang dipersist terpisah, jadi flow login berikutnya tetap konsisten dengan pilihan user.
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
 - Flow login tidak lagi mengisi NIM/password otomatis dari kredensial tersimpan.
 - User sekarang memilih eksplisit apakah akun ingin disimpan di perangkat. Jika opsi dimatikan, kredensial tersimpan langsung dihapus dari perangkat.
 - Sugest akun tersimpan hanya muncul saat opsi simpan aktif dan memang ada kredensial yang pernah disimpan.
