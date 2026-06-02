@@ -1,5 +1,13 @@
 # Todo
 
+## 2026-06-02 - Batalkan APK kedua, jadikan APK utama tanpa mark
+
+- [x] Audit perubahan sementara dari percobaan varian APK kedua.
+- [x] Rollback profile, package id, channel, dan script build untuk APK kedua.
+- [x] Hilangkan mark dari APK utama di halaman Pengaturan.
+- [x] Verifikasi lint dan typecheck setelah perubahan.
+- [x] Tulis ringkasan review hasil rollback.
+
 ## 2026-06-02 - Perbaikan notifikasi tugas dan absensi
 
 - [x] Audit alur notifikasi lokal dan backend yang aktif di aplikasi.
@@ -9,6 +17,13 @@
 
 ## Review
 
+- Varian APK kedua dibatalkan atas arahan user. Jalur yang tersisa harus kembali sederhana: satu APK utama, tanpa mark di Pengaturan, tanpa pemisahan package/channel tambahan.
+- Perubahan final yang dipertahankan hanya:
+  - hapus mark proyek dari `Pengaturan > About` pada APK utama
+  - kembalikan konfigurasi Expo/EAS ke satu jalur build utama
+- Verifikasi rollback:
+  - `npm run typecheck`
+  - `npm run lint`
 - Root cause utama ada di fallback lokal:
   - `new_task` menganggap semua tugas yang pertama kali terlihat app sebagai tugas baru, sehingga notifikasi bisa muncul massal saat app dibuka.
   - `task_open` belum dijadwalkan di muka; notifikasi baru dikirim saat app melihat tugas sudah dibuka.
