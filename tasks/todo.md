@@ -1,5 +1,13 @@
 # Todo
 
+## 2026-06-02 - Tambah reminder absensi sebelum buka
+
+- [x] Audit scheduler notifikasi absensi yang aktif saat ini.
+- [x] Tambahkan reminder absensi H-1 dan 1 jam sebelum buka.
+- [x] Pastikan tap notifikasi baru diarahkan ke filter absensi yang benar.
+- [x] Verifikasi lint dan typecheck setelah perubahan.
+- [x] Tulis ringkasan review hasil perubahan.
+
 ## 2026-06-02 - Rapikan flow simpan akun di login
 
 - [x] Audit ulang flow pilihan simpan akun setelah koreksi user.
@@ -33,6 +41,12 @@
 
 ## Review
 
+- Notifikasi absensi sekarang punya empat momen: H-1, 1 jam sebelum buka, saat dibuka, dan 30 menit sebelum ditutup.
+- Reminder H-1 dan 1 jam sebelum buka ikut memakai toggle `Notifikasi Absensi` yang sama; belum ada toggle terpisah agar perubahan tetap sederhana.
+- Tap notifikasi absensi H-1 dan 1 jam sebelum buka sekarang diarahkan ke tab `Absensi` dengan filter `Akan Datang`, sedangkan notifikasi buka/tutup tetap ke filter yang relevan.
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
 - Prompt pilihan simpan akun sekarang hanya tampil sampai user memilih `Ya` atau `Tidak`, lalu langsung hilang.
 - Sugest akun tersimpan tidak muncul otomatis lagi; sekarang baru muncul setelah user menyentuh kolom NIM atau password.
 - Preferensi simpan akun sekarang dipersist terpisah, jadi flow login berikutnya tetap konsisten dengan pilihan user.
