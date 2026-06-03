@@ -27,6 +27,7 @@ type RequestPayload = {
   fullname?: string;
   settings?: UserSettingsInput;
   pushToken?: string;
+  deviceKey?: string;
   platform?: string;
 };
 
@@ -358,6 +359,7 @@ Deno.serve(async (request) => {
 
     if (action === 'upsert-device') {
       const pushToken = payload.pushToken?.trim();
+      const deviceKey = payload.deviceKey?.trim();
       const platform = payload.platform?.trim() || 'unknown';
 
       if (!pushToken) {
@@ -366,18 +368,38 @@ Deno.serve(async (request) => {
         });
       }
 
-      const { error } = await supabase.from('user_devices').upsert(
-        {
-          app_user_id: appUser.id,
-          expo_push_token: pushToken,
-          platform,
-          active: true,
-          last_seen_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'expo_push_token',
+      if (deviceKey) {
+        const { error: legacyCleanupError } = await supabase
+          .from('user_devices')
+          .update({
+            active: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('app_user_id', appUser.id)
+          .eq('platform', platform)
+          .is('device_key', null);
+
+        if (legacyCleanupError) {
+          throw new Error(legacyCleanupError.message);
         }
-      );
+      }
+
+      const devicePayload = {
+        app_user_id: appUser.id,
+        expo_push_token: pushToken,
+        device_key: deviceKey || null,
+        platform,
+        active: true,
+        last_seen_at: new Date().toISOString(),
+      };
+
+      const { error } = deviceKey
+        ? await supabase.from('user_devices').upsert(devicePayload, {
+            onConflict: 'app_user_id,device_key',
+          })
+        : await supabase.from('user_devices').upsert(devicePayload, {
+            onConflict: 'expo_push_token',
+          });
 
       if (error) {
         throw new Error(error.message);

@@ -1,5 +1,14 @@
 # Todo
 
+## 2026-06-03 - Perbaiki notifikasi dobel dan icon notifikasi
+
+- [x] Audit jalur notifikasi lokal, push backend, dan konfigurasi icon Android.
+- [x] Cegah overlap local notification dengan remote push untuk jenis yang sama.
+- [x] Bersihkan token perangkat lama agar satu perangkat tidak menerima push dobel.
+- [x] Tambahkan icon aplikasi untuk notifikasi Android.
+- [x] Verifikasi lint, typecheck, dan deploy backend yang berubah.
+- [x] Tulis ringkasan review hasil perubahan.
+
 ## 2026-06-02 - Tambah reminder absensi sebelum buka
 
 - [x] Audit scheduler notifikasi absensi yang aktif saat ini.
@@ -41,6 +50,22 @@
 
 ## Review
 
+- Root cause dobel notifikasi paling mungkin berasal dari dua jalur aktif sekaligus: local notification yang dijadwalkan app dan remote push dari Supabase/FCM. Selain itu, token lama di `user_devices` bisa tetap aktif setelah token perangkat berubah.
+- Perbaikan mobile:
+  - jika push token sudah `ready`, local scheduler membatalkan jadwal untuk jenis yang sudah ditangani remote push (`new_task`, deadline, `task_open`, `task_closing`, `attendance_open`, `attendance_closing`).
+  - reminder absensi lokal yang belum ada di backend (`attendance_h1`, `attendance_preopen`) tetap aktif.
+  - jadwal lokal baru diberi identifier stabil agar lebih mudah dibatalkan dan tidak menumpuk.
+- Perbaikan backend:
+  - `user_devices` sekarang punya `device_key`.
+  - `mobile-data` meng-upsert perangkat berdasarkan `app_user_id + device_key` dan menonaktifkan token legacy tanpa `device_key` untuk platform yang sama.
+- Icon notifikasi Android ditambahkan lewat asset `notification-icon.png` dan konfigurasi `expo-notifications`. Perubahan icon butuh APK baru karena masuk native config.
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npx expo config --json`
+  - `npx supabase db push`
+  - `npx supabase functions deploy mobile-data`
+  - `npx supabase db query --linked ...` untuk memastikan kolom `device_key` sudah ada.
 - Notifikasi absensi sekarang punya empat momen: H-1, 1 jam sebelum buka, saat dibuka, dan 30 menit sebelum ditutup.
 - Reminder H-1 dan 1 jam sebelum buka ikut memakai toggle `Notifikasi Absensi` yang sama; belum ada toggle terpisah agar perubahan tetap sederhana.
 - Tap notifikasi absensi H-1 dan 1 jam sebelum buka sekarang diarahkan ke tab `Absensi` dengan filter `Akan Datang`, sedangkan notifikasi buka/tutup tetap ke filter yang relevan.
