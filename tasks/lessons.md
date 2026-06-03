@@ -10,3 +10,7 @@
 ## 2026-06-03
 
 - Kalau notifikasi muncul dobel, cek gabungan jalur lokal, push backend, dan token perangkat lama. Dedupe di client saja tidak cukup kalau backend masih punya lebih dari satu token aktif atau local scheduler masih overlap dengan remote push.
+
+## 2026-06-04
+
+- Prompt pilihan user di login jangan muncul sebelum aksi utama dimulai. Untuk pilihan seperti simpan akun, gate dari tombol submit lebih nyaman daripada menampilkan pertanyaan di render awal halaman.

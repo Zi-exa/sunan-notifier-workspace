@@ -1,5 +1,13 @@
 # Todo
 
+## 2026-06-04 - Tunda pertanyaan simpan akun login
+
+- [x] Audit flow prompt simpan akun di halaman login.
+- [x] Ubah prompt agar baru muncul setelah user menekan tombol Masuk SUNAN.
+- [x] Pastikan sugest akun tersimpan tetap muncul hanya setelah kolom disentuh.
+- [x] Verifikasi lint dan typecheck.
+- [x] Tulis ringkasan review hasil perubahan.
+
 ## 2026-06-03 - Perbaiki notifikasi dobel dan icon notifikasi
 
 - [x] Audit jalur notifikasi lokal, push backend, dan konfigurasi icon Android.
@@ -50,6 +58,13 @@
 
 ## Review
 
+- Prompt simpan akun di halaman login sekarang tidak muncul saat halaman pertama kali dibuka.
+- Jika user belum pernah memilih preferensi simpan akun, tombol `Masuk ke SUNAN` menampilkan prompt terlebih dulu.
+- Setelah user memilih `Ya` atau `Tidak`, login langsung dilanjutkan memakai pilihan tersebut.
+- Sugest akun tersimpan tetap hanya muncul saat preferensi simpan akun aktif, ada akun tersimpan, dan user menyentuh kolom NIM/password.
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
 - Root cause dobel notifikasi paling mungkin berasal dari dua jalur aktif sekaligus: local notification yang dijadwalkan app dan remote push dari Supabase/FCM. Selain itu, token lama di `user_devices` bisa tetap aktif setelah token perangkat berubah.
 - Perbaikan mobile:
   - jika push token sudah `ready`, local scheduler membatalkan jadwal untuk jenis yang sudah ditangani remote push (`new_task`, deadline, `task_open`, `task_closing`, `attendance_open`, `attendance_closing`).
