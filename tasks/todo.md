@@ -1,5 +1,12 @@
 # Todo
 
+## 2026-06-04 - Perbaiki keyboard menutup password login
+
+- [x] Audit layout login saat keyboard Android muncul.
+- [x] Tambahkan keyboard handling agar kolom password tetap terlihat.
+- [x] Verifikasi lint dan typecheck.
+- [x] Tulis ringkasan review hasil perubahan.
+
 ## 2026-06-04 - Tunda pertanyaan simpan akun login
 
 - [x] Audit flow prompt simpan akun di halaman login.
@@ -58,6 +65,12 @@
 
 ## Review
 
+- Halaman login sekarang memakai `KeyboardAvoidingView` mode `height` di Android agar area form mengecil saat keyboard terbuka.
+- Saat kolom password fokus di Android, ScrollView otomatis scroll ke bagian bawah form sehingga kolom password dan tombol login tidak tertutup keyboard.
+- Perubahan ini JS-only, jadi bisa dikirim lewat EAS Update tanpa APK baru.
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
 - Prompt simpan akun di halaman login sekarang tidak muncul saat halaman pertama kali dibuka.
 - Jika user belum pernah memilih preferensi simpan akun, tombol `Masuk ke SUNAN` menampilkan prompt terlebih dulu.
 - Setelah user memilih `Ya` atau `Tidak`, login langsung dilanjutkan memakai pilihan tersebut.
