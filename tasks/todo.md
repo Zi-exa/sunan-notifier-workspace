@@ -1,5 +1,14 @@
 # Todo
 
+## 2026-06-04 - Perbaiki dobel notifikasi deadline tugas
+
+- [x] Audit sumber notifikasi deadline tugas lokal dan backend.
+- [x] Samakan dedupe key deadline antara `poll-sunan-data` dan `daily-reminder`.
+- [x] Cegah scheduler lokal deadline berjalan saat push backend masih sinkron.
+- [x] Bersihkan antrean deadline lama yang dobel.
+- [x] Verifikasi typecheck, lint, deploy function, dan query queue.
+- [x] Tulis ringkasan review hasil perubahan.
+
 ## 2026-06-04 - Perbaiki keyboard menutup password login
 
 - [x] Audit layout login saat keyboard Android muncul.
@@ -65,6 +74,21 @@
 
 ## Review
 
+- Root cause dobel deadline tugas ada di backend: `poll-sunan-data` dan `daily-reminder` sama-sama membuat `deadline_h1`/`deadline_today`, tapi memakai `dedupe_key` berbeda (`h1/today-*` vs `daily-*`), sehingga unique index tidak menganggapnya duplikat.
+- Perbaikan backend:
+  - `poll-sunan-data` dan `daily-reminder` sekarang memakai format canonical yang sama: `deadline-h1-*` dan `deadline-today-*`.
+  - Migration cleanup menghapus pending deadline dobel lama dan menormalisasi key yang tersisa.
+- Perbaikan mobile:
+  - local task notification sekarang tidak berjalan saat push backend masih `idle`, `syncing`, atau `ready`.
+  - fallback lokal baru berjalan saat push benar-benar `unavailable` atau `error`.
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npx supabase db push`
+  - `npx supabase functions deploy poll-sunan-data`
+  - `npx supabase functions deploy daily-reminder`
+  - query pending duplicate deadline menghasilkan `rows: []`
+  - query pending deadline key menunjukkan `old_keys: 0`
 - Halaman login sekarang memakai `KeyboardAvoidingView` mode `height` di Android agar area form mengecil saat keyboard terbuka.
 - Saat kolom password fokus di Android, ScrollView otomatis scroll ke bagian bawah form sehingga kolom password dan tombol login tidak tertutup keyboard.
 - Perubahan ini JS-only, jadi bisa dikirim lewat EAS Update tanpa APK baru.

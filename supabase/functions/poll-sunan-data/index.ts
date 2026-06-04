@@ -616,6 +616,16 @@ function buildReminderDate(kind: 'deadline_h1' | 'deadline_today', dueDateUnixSe
   return reminderDate;
 }
 
+function buildDeadlineDedupeKey(
+  kind: 'deadline_h1' | 'deadline_today',
+  appUserId: string,
+  assignmentId: number,
+  reminderDateKey: string
+): string {
+  const scope = kind === 'deadline_h1' ? 'deadline-h1' : 'deadline-today';
+  return `${scope}-${appUserId}-${assignmentId}-${reminderDateKey}`;
+}
+
 function buildTaskClosingReminderDate(dueDateUnixSeconds: number, now: Date): Date | null {
   const dueDateMs = dueDateUnixSeconds * 1000;
   const nowMs = now.getTime();
@@ -792,6 +802,7 @@ Deno.serve(async (request) => {
 
       const snapshotRows: Array<Record<string, unknown>> = [];
       const queueRows: Array<Record<string, unknown>> = [];
+      const todayKey = toJakartaDateKey(now);
 
       for (const assignment of resolvedAssignments) {
         const payloadHash = await hashPayload(assignment);
@@ -834,7 +845,7 @@ Deno.serve(async (request) => {
                 taskId: assignment.id,
                 kind: 'deadline_h1',
               },
-              dedupe_key: `h1-${user.id}-${assignment.id}-${toJakartaDateKey(now)}`,
+              dedupe_key: buildDeadlineDedupeKey('deadline_h1', user.id, assignment.id, todayKey),
               schedule_at: reminderDate.toISOString(),
             });
           }
@@ -852,7 +863,7 @@ Deno.serve(async (request) => {
                 taskId: assignment.id,
                 kind: 'deadline_today',
               },
-              dedupe_key: `today-${user.id}-${assignment.id}-${toJakartaDateKey(now)}`,
+              dedupe_key: buildDeadlineDedupeKey('deadline_today', user.id, assignment.id, todayKey),
               schedule_at: reminderDate.toISOString(),
             });
           }
