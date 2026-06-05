@@ -1,5 +1,14 @@
 # Todo
 
+## 2026-06-05 - Bersihkan notifikasi akun lama di device yang sama
+
+- [x] Audit device/token aktif lintas akun di Supabase.
+- [x] Fix backend agar token/device pindah ke akun login terbaru.
+- [x] Tambahkan cleanup device saat logout.
+- [x] Bersihkan jadwal notifikasi lokal saat akun aktif berubah.
+- [x] Verifikasi typecheck, lint, migration, deploy, dan query device.
+- [x] Tulis ringkasan review hasil perubahan.
+
 ## 2026-06-04 - Perbaiki dobel notifikasi deadline tugas
 
 - [x] Audit sumber notifikasi deadline tugas lokal dan backend.
@@ -74,6 +83,21 @@
 
 ## Review
 
+- Notifikasi absen mata kuliah milik akun lain paling mungkin berasal dari jadwal notifikasi lokal yang tersisa di HP setelah akun teman pernah login, bukan dari device aktif Supabase saat ini.
+- Perbaikan mobile:
+  - jadwal notifikasi lokal SUNAN dibatalkan saat logout atau session expired.
+  - app menyimpan owner jadwal notifikasi lokal; kalau akun aktif berubah, semua jadwal lokal lama dibatalkan dan dedupe notification direset.
+  - `deactivate-device` dipanggil saat logout agar row device akun lama tidak tetap aktif di Supabase.
+- Perbaikan backend:
+  - `upsert-device` sekarang memakai konflik `expo_push_token`, sehingga token perangkat yang sama pindah ke akun login terbaru.
+  - device key aktif dibuat unik lintas akun, dan row device lama dengan device key sama dinonaktifkan.
+- Verifikasi:
+  - `npm run typecheck`
+  - `npm run lint`
+  - `npx supabase db push`
+  - `npx supabase functions deploy mobile-data`
+  - query device key aktif lintas akun menghasilkan `rows: []`
+  - index `uq_user_devices_active_device_key` terpasang
 - Root cause dobel deadline tugas ada di backend: `poll-sunan-data` dan `daily-reminder` sama-sama membuat `deadline_h1`/`deadline_today`, tapi memakai `dedupe_key` berbeda (`h1/today-*` vs `daily-*`), sehingga unique index tidak menganggapnya duplikat.
 - Perbaikan backend:
   - `poll-sunan-data` dan `daily-reminder` sekarang memakai format canonical yang sama: `deadline-h1-*` dan `deadline-today-*`.

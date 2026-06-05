@@ -20,7 +20,7 @@ type UserSettingsInput = {
 };
 
 type RequestPayload = {
-  action?: 'sync-profile' | 'load-settings' | 'save-settings' | 'upsert-device';
+  action?: 'sync-profile' | 'load-settings' | 'save-settings' | 'upsert-device' | 'deactivate-device';
   moodleToken?: string;
   moodleUserId?: number;
   nim?: string;
@@ -361,6 +361,7 @@ Deno.serve(async (request) => {
       const pushToken = payload.pushToken?.trim();
       const deviceKey = payload.deviceKey?.trim();
       const platform = payload.platform?.trim() || 'unknown';
+      const nowIso = new Date().toISOString();
 
       if (!pushToken) {
         return jsonResponse(400, {
@@ -369,11 +370,25 @@ Deno.serve(async (request) => {
       }
 
       if (deviceKey) {
+        const { error: staleDeviceError } = await supabase
+          .from('user_devices')
+          .update({
+            active: false,
+            device_key: null,
+            updated_at: nowIso,
+          })
+          .eq('device_key', deviceKey)
+          .neq('expo_push_token', pushToken);
+
+        if (staleDeviceError) {
+          throw new Error(staleDeviceError.message);
+        }
+
         const { error: legacyCleanupError } = await supabase
           .from('user_devices')
           .update({
             active: false,
-            updated_at: new Date().toISOString(),
+            updated_at: nowIso,
           })
           .eq('app_user_id', appUser.id)
           .eq('platform', platform)
@@ -390,16 +405,50 @@ Deno.serve(async (request) => {
         device_key: deviceKey || null,
         platform,
         active: true,
-        last_seen_at: new Date().toISOString(),
+        last_seen_at: nowIso,
+      };
+
+      const { error } = await supabase.from('user_devices').upsert(devicePayload, {
+        onConflict: 'expo_push_token',
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return jsonResponse(200, {
+        appUserId: appUser.id,
+        ok: true,
+      });
+    }
+
+    if (action === 'deactivate-device') {
+      const deviceKey = payload.deviceKey?.trim();
+      const pushToken = payload.pushToken?.trim();
+
+      if (!deviceKey && !pushToken) {
+        return jsonResponse(200, {
+          appUserId: appUser.id,
+          ok: true,
+        });
+      }
+
+      const updatePayload = {
+        active: false,
+        updated_at: new Date().toISOString(),
       };
 
       const { error } = deviceKey
-        ? await supabase.from('user_devices').upsert(devicePayload, {
-            onConflict: 'app_user_id,device_key',
-          })
-        : await supabase.from('user_devices').upsert(devicePayload, {
-            onConflict: 'expo_push_token',
-          });
+        ? await supabase
+            .from('user_devices')
+            .update(updatePayload)
+            .eq('app_user_id', appUser.id)
+            .eq('device_key', deviceKey)
+        : await supabase
+            .from('user_devices')
+            .update(updatePayload)
+            .eq('app_user_id', appUser.id)
+            .eq('expo_push_token', pushToken);
 
       if (error) {
         throw new Error(error.message);

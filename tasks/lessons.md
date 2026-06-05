@@ -16,3 +16,7 @@
 - Prompt pilihan user di login jangan muncul sebelum aksi utama dimulai. Untuk pilihan seperti simpan akun, gate dari tombol submit lebih nyaman daripada menampilkan pertanyaan di render awal halaman.
 - Untuk form login mobile, jangan mengandalkan `KeyboardAvoidingView` iOS saja. Field bawah seperti password perlu behavior Android dan scroll eksplisit saat fokus agar tidak tertutup keyboard.
 - Jika dua backend job bisa membuat event notifikasi yang sama, dedupe key harus canonical lintas job. Prefix per-function seperti `daily-*` vs `today-*` tetap akan lolos unique index dan membuat notifikasi dobel.
+
+## 2026-06-05
+
+- Kalau HP pernah dipakai login akun lain, cek dua sumber nyangkut: row device/token di backend dan scheduled local notifications di perangkat. Membersihkan backend saja tidak menghapus notifikasi lokal yang sudah dijadwalkan.
