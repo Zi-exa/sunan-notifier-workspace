@@ -167,14 +167,14 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 
 type QueueRow = {
   id: number;
-  app_user_id: string;
-  title: string;
-  body: string;
-  payload: Record<string, unknown>;
+  id_mahasiswa: string;
+  judul_notifikasi: string;
+  isi_notifikasi: string;
+  isi_data: Record<string, unknown>;
 };
 
 type DeviceRow = {
-  expo_push_token: string;
+  token_perangkat: string;
 };
 
 async function sendViaExpo(
@@ -378,12 +378,12 @@ Deno.serve(async (request) => {
 
   try {
     const queueResult = await supabase
-      .from('notification_queue')
-      .select('id,app_user_id,title,body,payload')
-      .is('sent_at', null)
-      .is('failed_reason', null)
-      .lte('schedule_at', new Date().toISOString())
-      .order('schedule_at', { ascending: true })
+      .from('tabel_antrian_notifikasi')
+      .select('id,id_mahasiswa,judul_notifikasi,isi_notifikasi,isi_data')
+      .is('dikirim_pada', null)
+      .is('alasan_gagal', null)
+      .lte('jadwal_kirim', new Date().toISOString())
+      .order('jadwal_kirim', { ascending: true })
       .limit(100);
 
     if (queueResult.error) {
@@ -396,17 +396,17 @@ Deno.serve(async (request) => {
 
     for (const row of rows) {
       const deviceResult = await supabase
-        .from('user_devices')
-        .select('expo_push_token')
-        .eq('app_user_id', row.app_user_id)
-        .eq('active', true);
+        .from('tabel_perangkat_mahasiswa')
+        .select('token_perangkat')
+        .eq('id_mahasiswa', row.id_mahasiswa)
+        .eq('aktif', true);
 
       const devices = (deviceResult.data ?? []) as DeviceRow[];
 
       if (!devices.length) {
         await supabase
-          .from('notification_queue')
-          .update({ failed_reason: 'Tidak ada device aktif untuk user ini.' })
+          .from('tabel_antrian_notifikasi')
+          .update({ alasan_gagal: 'Tidak ada device aktif untuk user ini.' })
           .eq('id', row.id);
         failedCount += 1;
         continue;
@@ -416,7 +416,12 @@ Deno.serve(async (request) => {
       const failures: string[] = [];
 
       for (const device of devices) {
-        const delivery = await deliverPush(device.expo_push_token, row.title, row.body, row.payload);
+        const delivery = await deliverPush(
+          device.token_perangkat,
+          row.judul_notifikasi,
+          row.isi_notifikasi,
+          row.isi_data
+        );
 
         if (delivery.ok) {
           success += 1;
@@ -427,18 +432,18 @@ Deno.serve(async (request) => {
 
       if (success > 0) {
         await supabase
-          .from('notification_queue')
+          .from('tabel_antrian_notifikasi')
           .update({
-            sent_at: new Date().toISOString(),
-            failed_reason: failures.length ? failures.join('; ').slice(0, 800) : null,
+            dikirim_pada: new Date().toISOString(),
+            alasan_gagal: failures.length ? failures.join('; ').slice(0, 800) : null,
           })
           .eq('id', row.id);
         sentCount += 1;
       } else {
         await supabase
-          .from('notification_queue')
+          .from('tabel_antrian_notifikasi')
           .update({
-            failed_reason: failures.join('; ').slice(0, 800),
+            alasan_gagal: failures.join('; ').slice(0, 800),
           })
           .eq('id', row.id);
         failedCount += 1;

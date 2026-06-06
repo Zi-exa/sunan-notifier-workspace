@@ -15,7 +15,7 @@ Folder ini berisi artefak backend untuk SUNAN Notifier.
 - functions/daily-reminder/index.ts
   - enqueue reminder H-1 dan H-hari
 - functions/mobile-data/index.ts
-  - endpoint aman untuk operasi mobile ke `app_users`, `user_settings`, dan `user_devices`
+  - endpoint aman untuk operasi mobile ke `tabel_mahasiswa`, `tabel_pengaturan_mahasiswa`, dan `tabel_perangkat_mahasiswa`
   - memvalidasi token SUNAN di server sebelum memakai service role Supabase
 
 ## Alur Ringkas
@@ -23,7 +23,7 @@ Folder ini berisi artefak backend untuk SUNAN Notifier.
 1. User login di app dan token Moodle tersimpan
 2. Edge function poll-sunan-data jalan setiap 15 menit
 3. Snapshot baru dibandingkan snapshot lama
-4. Jika ada perubahan, row masuk notification_queue
+4. Jika ada perubahan, row masuk `tabel_antrian_notifikasi`
 5. send-push kirim queue ke device user
 6. daily-reminder menyiapkan reminder jam 07.00
 7. operasi mobile seperti sync profil, settings, dan device token lewat function mobile-data, bukan query langsung ke tabel public

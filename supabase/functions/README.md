@@ -4,11 +4,11 @@ Fungsi serverless yang disiapkan:
 
 1. poll-sunan-data
 - Polling API SUNAN (Moodle Web Service)
-- Sinkron snapshot tugas ke table task_snapshots
+- Sinkron snapshot tugas ke `tabel_snapshot_tugas`
 - Queue notifikasi tugas baru, deadline H-1, deadline H-hari, dan absensi
 
 2. send-push
-- Ambil antrean dari notification_queue
+- Ambil antrean dari `tabel_antrian_notifikasi`
 - Kirim push ke device user (Expo push token atau FCM legacy)
 - Catat status kirim dan error
 

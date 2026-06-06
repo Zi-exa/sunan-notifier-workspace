@@ -1,20 +1,23 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 type UserSettingsRow = {
-  notify_new_task: boolean;
-  notify_deadline_h1: boolean;
-  notify_deadline_today: boolean;
-  notify_task_open: boolean;
-  notify_attendance: boolean;
-  poll_interval_minutes: number;
-  monitored_course_ids: number[];
+  notifikasi_tugas_baru: boolean;
+  notifikasi_deadline_h1: boolean;
+  notifikasi_deadline_hari_ini: boolean;
+  notifikasi_tugas_dibuka: boolean;
+  notifikasi_absensi: boolean;
+  interval_sinkronisasi_menit: number;
+  id_mata_kuliah_dipantau: number[];
 };
 
 type UserRow = {
   id: string;
-  moodle_user_id: number;
-  moodle_token: string;
-  user_settings: UserSettingsRow | UserSettingsRow[] | null;
+  id_pengguna_moodle: number;
+  token_moodle: string;
+};
+
+type UserSettingsRecord = UserSettingsRow & {
+  id_mahasiswa: string;
 };
 
 type MoodleCourse = {
@@ -146,26 +149,18 @@ function toJakartaDateKey(date: Date): string {
   return jakartaDateFormatter.format(date);
 }
 
-function resolveSettings(record: UserRow): UserSettingsRow {
+function resolveSettings(settings: UserSettingsRow | undefined): UserSettingsRow {
   const defaults: UserSettingsRow = {
-    notify_new_task: true,
-    notify_deadline_h1: true,
-    notify_deadline_today: true,
-    notify_task_open: true,
-    notify_attendance: true,
-    poll_interval_minutes: 15,
-    monitored_course_ids: [],
+    notifikasi_tugas_baru: true,
+    notifikasi_deadline_h1: true,
+    notifikasi_deadline_hari_ini: true,
+    notifikasi_tugas_dibuka: true,
+    notifikasi_absensi: true,
+    interval_sinkronisasi_menit: 15,
+    id_mata_kuliah_dipantau: [],
   };
 
-  if (!record.user_settings) {
-    return defaults;
-  }
-
-  if (Array.isArray(record.user_settings)) {
-    return record.user_settings[0] ?? defaults;
-  }
-
-  return record.user_settings;
+  return settings ?? defaults;
 }
 
 function appendParam(params: URLSearchParams, key: string, value: unknown): void {
@@ -691,8 +686,8 @@ Deno.serve(async (request) => {
   }
 
   const runStart = await supabase
-    .from('polling_runs')
-    .insert({ status: 'running', details: { source: 'poll-sunan-data' } })
+    .from('tabel_riwayat_sinkronisasi')
+    .insert({ status: 'running', detail_sinkronisasi: { source: 'poll-sunan-data' } })
     .select('id')
     .single();
 
@@ -700,29 +695,42 @@ Deno.serve(async (request) => {
 
   try {
     const usersResult = await supabase
-      .from('app_users')
-      .select(
-        'id,moodle_user_id,moodle_token,user_settings(notify_new_task,notify_deadline_h1,notify_deadline_today,notify_task_open,notify_attendance,poll_interval_minutes,monitored_course_ids)'
-      );
+      .from('tabel_mahasiswa')
+      .select('id,id_pengguna_moodle,token_moodle');
 
     if (usersResult.error) {
       throw new Error(usersResult.error.message);
     }
 
+    const settingsResult = await supabase
+      .from('tabel_pengaturan_mahasiswa')
+      .select(
+        'id_mahasiswa,notifikasi_tugas_baru,notifikasi_deadline_h1,notifikasi_deadline_hari_ini,notifikasi_tugas_dibuka,notifikasi_absensi,interval_sinkronisasi_menit,id_mata_kuliah_dipantau'
+      );
+
+    if (settingsResult.error) {
+      throw new Error(settingsResult.error.message);
+    }
+
     const users = (usersResult.data ?? []) as UserRow[];
+    const settingsMap = new Map<string, UserSettingsRow>();
+    for (const row of (settingsResult.data ?? []) as UserSettingsRecord[]) {
+      settingsMap.set(row.id_mahasiswa, row);
+    }
+
     let usersProcessed = 0;
     let snapshotsUpserted = 0;
     let notificationsQueued = 0;
     let attendanceEventsDetected = 0;
 
     for (const user of users) {
-      const settings = resolveSettings(user);
+      const settings = resolveSettings(settingsMap.get(user.id));
       const now = new Date();
 
       let courses: MoodleCourse[] = [];
       try {
-        courses = await callMoodle<MoodleCourse[]>(user.moodle_token, 'core_enrol_get_users_courses', {
-          userid: user.moodle_user_id,
+        courses = await callMoodle<MoodleCourse[]>(user.token_moodle, 'core_enrol_get_users_courses', {
+          userid: user.id_pengguna_moodle,
         });
       } catch {
         continue;
@@ -730,8 +738,8 @@ Deno.serve(async (request) => {
 
       const allCourseIds = courses.map((course) => course.id);
       const scopedCourseIds =
-        settings.monitored_course_ids.length > 0
-          ? allCourseIds.filter((courseId) => settings.monitored_course_ids.includes(courseId))
+        settings.id_mata_kuliah_dipantau.length > 0
+          ? allCourseIds.filter((courseId) => settings.id_mata_kuliah_dipantau.includes(courseId))
           : allCourseIds;
 
       if (scopedCourseIds.length === 0) {
@@ -740,7 +748,7 @@ Deno.serve(async (request) => {
       }
 
       const assignmentsPayload = await callMoodle<MoodleAssignmentsPayload>(
-        user.moodle_token,
+        user.token_moodle,
         'mod_assign_get_assignments',
         {
           courseids: scopedCourseIds,
@@ -762,7 +770,7 @@ Deno.serve(async (request) => {
       let quizSnapshots: AssignmentSnapshotPayload[] = [];
       try {
         const quizPayload = await callMoodle<MoodleQuizzesPayload>(
-          user.moodle_token,
+          user.token_moodle,
           'mod_quiz_get_quizzes_by_courses',
           {
             courseids: scopedCourseIds,
@@ -778,7 +786,7 @@ Deno.serve(async (request) => {
 
       const resolvedAssignments: AssignmentSnapshotPayload[] = [];
       for (const assignment of [...assignmentSnapshots, ...quizSnapshots]) {
-        const statusInfo = await resolveAssignmentStatus(user.moodle_token, assignment);
+        const statusInfo = await resolveAssignmentStatus(user.token_moodle, assignment);
         resolvedAssignments.push({
           ...assignment,
           status: statusInfo.status,
@@ -787,9 +795,9 @@ Deno.serve(async (request) => {
       }
 
       const existingSnapshotsResult = await supabase
-        .from('task_snapshots')
-        .select('assignment_id,payload_hash')
-        .eq('app_user_id', user.id);
+        .from('tabel_snapshot_tugas')
+        .select('id_tugas,hash_data')
+        .eq('id_mahasiswa', user.id);
 
       if (existingSnapshotsResult.error) {
         continue;
@@ -797,7 +805,7 @@ Deno.serve(async (request) => {
 
       const existingMap = new Map<number, string>();
       for (const row of existingSnapshotsResult.data ?? []) {
-        existingMap.set(row.assignment_id as number, row.payload_hash as string);
+        existingMap.set(row.id_tugas as number, row.hash_data as string);
       }
 
       const snapshotRows: Array<Record<string, unknown>> = [];
@@ -807,92 +815,92 @@ Deno.serve(async (request) => {
       for (const assignment of resolvedAssignments) {
         const payloadHash = await hashPayload(assignment);
         snapshotRows.push({
-          app_user_id: user.id,
-          assignment_id: assignment.id,
-          due_at: assignment.dueDate ? new Date(assignment.dueDate * 1000).toISOString() : null,
+          id_mahasiswa: user.id,
+          id_tugas: assignment.id,
+          batas_waktu: assignment.dueDate ? new Date(assignment.dueDate * 1000).toISOString() : null,
           status: assignment.status,
-          payload_hash: payloadHash,
-          payload: assignment,
+          hash_data: payloadHash,
+          isi_data: assignment,
         });
 
         const previousHash = existingMap.get(assignment.id);
 
-        if (!previousHash && settings.notify_new_task) {
+        if (!previousHash && settings.notifikasi_tugas_baru) {
           const scheduleAt = new Date();
           queueRows.push({
-            app_user_id: user.id,
-            notification_type: 'new_task',
-            title: 'Tugas Baru SUNAN',
-            body: `${assignment.name} baru dipost dosen.`,
-            payload: {
+            id_mahasiswa: user.id,
+            jenis_notifikasi: 'new_task',
+            judul_notifikasi: 'Tugas Baru SUNAN',
+            isi_notifikasi: `${assignment.name} baru dipost dosen.`,
+            isi_data: {
               taskId: assignment.id,
               kind: 'new_task',
             },
-            dedupe_key: `new-task-${user.id}-${assignment.id}-${payloadHash}`,
-            schedule_at: scheduleAt.toISOString(),
+            kunci_anti_duplikat: `new-task-${user.id}-${assignment.id}-${payloadHash}`,
+            jadwal_kirim: scheduleAt.toISOString(),
           });
         }
 
-        if (assignment.status !== 'submitted' && settings.notify_deadline_h1) {
+        if (assignment.status !== 'submitted' && settings.notifikasi_deadline_h1) {
           if (isDueOnTomorrowJakarta(assignment.dueDate, now)) {
             const reminderDate = buildReminderDate('deadline_h1', assignment.dueDate);
             queueRows.push({
-              app_user_id: user.id,
-              notification_type: 'deadline_h1',
-              title: 'Pengingat Deadline H-1',
-              body: `${assignment.name} akan deadline besok.`,
-              payload: {
+              id_mahasiswa: user.id,
+              jenis_notifikasi: 'deadline_h1',
+              judul_notifikasi: 'Pengingat Deadline H-1',
+              isi_notifikasi: `${assignment.name} akan deadline besok.`,
+              isi_data: {
                 taskId: assignment.id,
                 kind: 'deadline_h1',
               },
-              dedupe_key: buildDeadlineDedupeKey('deadline_h1', user.id, assignment.id, todayKey),
-              schedule_at: reminderDate.toISOString(),
+              kunci_anti_duplikat: buildDeadlineDedupeKey('deadline_h1', user.id, assignment.id, todayKey),
+              jadwal_kirim: reminderDate.toISOString(),
             });
           }
         }
 
-        if (assignment.status !== 'submitted' && settings.notify_deadline_today) {
+        if (assignment.status !== 'submitted' && settings.notifikasi_deadline_hari_ini) {
           if (isDueTodayJakarta(assignment.dueDate, now)) {
             const reminderDate = buildReminderDate('deadline_today', assignment.dueDate);
             queueRows.push({
-              app_user_id: user.id,
-              notification_type: 'deadline_today',
-              title: 'Pengingat Deadline Hari Ini',
-              body: `${assignment.name} deadline hari ini.`,
-              payload: {
+              id_mahasiswa: user.id,
+              jenis_notifikasi: 'deadline_today',
+              judul_notifikasi: 'Pengingat Deadline Hari Ini',
+              isi_notifikasi: `${assignment.name} deadline hari ini.`,
+              isi_data: {
                 taskId: assignment.id,
                 kind: 'deadline_today',
               },
-              dedupe_key: buildDeadlineDedupeKey('deadline_today', user.id, assignment.id, todayKey),
-              schedule_at: reminderDate.toISOString(),
+              kunci_anti_duplikat: buildDeadlineDedupeKey('deadline_today', user.id, assignment.id, todayKey),
+              jadwal_kirim: reminderDate.toISOString(),
             });
           }
 
           const closingReminderDate = buildTaskClosingReminderDate(assignment.dueDate, now);
           if (closingReminderDate) {
             queueRows.push({
-              app_user_id: user.id,
-              notification_type: 'task_closing',
-              title: 'Tugas Hampir Deadline',
-              body: `${assignment.name} deadline kurang dari 30 menit lagi.`,
-              payload: {
+              id_mahasiswa: user.id,
+              jenis_notifikasi: 'task_closing',
+              judul_notifikasi: 'Tugas Hampir Deadline',
+              isi_notifikasi: `${assignment.name} deadline kurang dari 30 menit lagi.`,
+              isi_data: {
                 taskId: assignment.id,
                 kind: 'task_closing',
               },
-              dedupe_key: `closing-${user.id}-${assignment.id}-${assignment.dueDate}`,
-              schedule_at: closingReminderDate.toISOString(),
+              kunci_anti_duplikat: `closing-${user.id}-${assignment.id}-${assignment.dueDate}`,
+              jadwal_kirim: closingReminderDate.toISOString(),
             });
           }
         }
       }
 
-      if (settings.notify_attendance) {
+      if (settings.notifikasi_absensi) {
         try {
           const attendanceEvents = await getAttendanceEvents(
-            user.moodle_token,
+            user.token_moodle,
             scopedCourseIds,
             now,
-            settings.poll_interval_minutes
+            settings.interval_sinkronisasi_menit
           );
           attendanceEventsDetected += attendanceEvents.length;
 
@@ -901,7 +909,7 @@ Deno.serve(async (request) => {
             const openScheduleDate = resolveAttendanceOpenSchedule(
               event,
               now,
-              settings.poll_interval_minutes
+              settings.interval_sinkronisasi_menit
             );
 
             const closesAtMs =
@@ -922,32 +930,32 @@ Deno.serve(async (request) => {
 
             if (openScheduleDate) {
               queueRows.push({
-                app_user_id: user.id,
-                notification_type: 'attendance_open',
-                title: 'Absensi Dibuka',
-                body: `${event.name} sudah dibuka. Jangan lupa isi absensi.`,
-                payload: {
+                id_mahasiswa: user.id,
+                jenis_notifikasi: 'attendance_open',
+                judul_notifikasi: 'Absensi Dibuka',
+                isi_notifikasi: `${event.name} sudah dibuka. Jangan lupa isi absensi.`,
+                isi_data: {
                   eventId: event.id,
                   kind: 'attendance_open',
                 },
-                dedupe_key: `attendance-open-${user.id}-${event.id}`,
-                schedule_at: openScheduleDate.toISOString(),
+                kunci_anti_duplikat: `attendance-open-${user.id}-${event.id}`,
+                jadwal_kirim: openScheduleDate.toISOString(),
               });
             }
 
             if (isClosingSoon) {
               const scheduleAt = new Date();
               queueRows.push({
-                app_user_id: user.id,
-                notification_type: 'attendance_closing',
-                title: 'Absensi Segera Ditutup',
-                body: `${event.name} akan segera ditutup. Segera isi absensi.`,
-                payload: {
+                id_mahasiswa: user.id,
+                jenis_notifikasi: 'attendance_closing',
+                judul_notifikasi: 'Absensi Segera Ditutup',
+                isi_notifikasi: `${event.name} akan segera ditutup. Segera isi absensi.`,
+                isi_data: {
                   eventId: event.id,
                   kind: 'attendance_closing',
                 },
-                dedupe_key: `attendance-closing-${user.id}-${event.id}-${toJakartaDateKey(now)}`,
-                schedule_at: scheduleAt.toISOString(),
+                kunci_anti_duplikat: `attendance-closing-${user.id}-${event.id}-${toJakartaDateKey(now)}`,
+                jadwal_kirim: scheduleAt.toISOString(),
               });
             }
           }
@@ -957,8 +965,8 @@ Deno.serve(async (request) => {
       }
 
       if (snapshotRows.length > 0) {
-        const upsertResult = await supabase.from('task_snapshots').upsert(snapshotRows, {
-          onConflict: 'app_user_id,assignment_id',
+        const upsertResult = await supabase.from('tabel_snapshot_tugas').upsert(snapshotRows, {
+          onConflict: 'id_mahasiswa,id_tugas',
         });
 
         if (!upsertResult.error) {
@@ -967,8 +975,8 @@ Deno.serve(async (request) => {
       }
 
       if (queueRows.length > 0) {
-        const queueResult = await supabase.from('notification_queue').insert(queueRows, {
-          onConflict: 'dedupe_key',
+        const queueResult = await supabase.from('tabel_antrian_notifikasi').insert(queueRows, {
+          onConflict: 'kunci_anti_duplikat',
           ignoreDuplicates: true,
         });
 
@@ -982,11 +990,11 @@ Deno.serve(async (request) => {
 
     if (runId) {
       await supabase
-        .from('polling_runs')
+        .from('tabel_riwayat_sinkronisasi')
         .update({
           status: 'completed',
-          completed_at: new Date().toISOString(),
-          details: {
+          selesai_pada: new Date().toISOString(),
+          detail_sinkronisasi: {
             users_processed: usersProcessed,
             snapshots_upserted: snapshotsUpserted,
             notifications_queued: notificationsQueued,
@@ -1014,11 +1022,11 @@ Deno.serve(async (request) => {
   } catch (error) {
     if (runId) {
       await supabase
-        .from('polling_runs')
+        .from('tabel_riwayat_sinkronisasi')
         .update({
           status: 'failed',
-          completed_at: new Date().toISOString(),
-          notes: error instanceof Error ? error.message : 'Unknown error',
+          selesai_pada: new Date().toISOString(),
+          catatan: error instanceof Error ? error.message : 'Unknown error',
         })
         .eq('id', runId);
     }

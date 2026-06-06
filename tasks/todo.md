@@ -1,5 +1,23 @@
 # Todo
 
+## 2026-06-06 - Ubah nama tabel dan kolom Supabase ke Bahasa Indonesia
+
+- [x] Audit seluruh referensi schema aktif di Edge Function dan aplikasi mobile.
+- [x] Tetapkan mapping nama teknis snake_case sesuai format yang disetujui.
+- [x] Buat migration atomik untuk rename tabel, kolom, sequence, constraint, index, dan trigger.
+- [x] Update seluruh Edge Function dan dokumentasi teknis aktif.
+- [x] Terapkan migration dan deploy fungsi backend terkait.
+- [x] Verifikasi schema, data, RLS, function, typecheck, dan lint.
+- [x] Commit dan push perubahan tanpa memasukkan file lama yang tidak terkait.
+
+### Review
+
+- Enam tabel operasional dan seluruh kolom teknis sudah memakai nama Bahasa Indonesia tanpa menyalin atau menghapus data.
+- RLS tetap aktif dan dipaksa pada semua tabel; hanya `service_role` yang memiliki akses tabel langsung.
+- Edge Function `mobile-data`, `poll-sunan-data`, `daily-reminder`, dan `send-push` sudah memakai schema baru dan berstatus aktif.
+- Uji polling nyata selesai dengan status `completed`: 4 user diproses, 61 snapshot diperbarui, dan 7 event absensi terdeteksi.
+- Verifikasi lulus: migration transaction test, `db push`, database advisors, query schema/data/grant, `npm run typecheck`, dan `npm run lint`.
+
 ## 2026-06-05 - Bersihkan notifikasi akun lama di device yang sama
 
 - [x] Audit device/token aktif lintas akun di Supabase.

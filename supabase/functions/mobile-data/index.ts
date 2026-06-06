@@ -39,7 +39,7 @@ type MoodleSiteInfo = {
 
 type AppUserRow = {
   id: string;
-  moodle_user_id: number;
+  id_pengguna_moodle: number;
 };
 
 type UserSettingsRow = Record<string, unknown>;
@@ -126,34 +126,16 @@ function normalizeMonitoredCourseIds(values: unknown): number[] {
   return values.map((value) => Number(value)).filter((value) => Number.isFinite(value));
 }
 
-function toRemoteUserSettings(data: Record<string, unknown>, includeNotifyTaskOpen: boolean) {
+function toRemoteUserSettings(data: Record<string, unknown>) {
   return {
-    notifyNewTask: Boolean(data.notify_new_task),
-    notifyDeadlineH1: Boolean(data.notify_deadline_h1),
-    notifyDeadlineToday: Boolean(data.notify_deadline_today),
-    notifyTaskOpen: includeNotifyTaskOpen ? Boolean(data.notify_task_open) : undefined,
-    notifyAttendance: Boolean(data.notify_attendance),
-    pollIntervalMinutes: Number(data.poll_interval_minutes) as 15 | 30 | 60,
-    monitoredCourseIds: normalizeMonitoredCourseIds(data.monitored_course_ids),
+    notifyNewTask: Boolean(data.notifikasi_tugas_baru),
+    notifyDeadlineH1: Boolean(data.notifikasi_deadline_h1),
+    notifyDeadlineToday: Boolean(data.notifikasi_deadline_hari_ini),
+    notifyTaskOpen: Boolean(data.notifikasi_tugas_dibuka),
+    notifyAttendance: Boolean(data.notifikasi_absensi),
+    pollIntervalMinutes: Number(data.interval_sinkronisasi_menit) as 15 | 30 | 60,
+    monitoredCourseIds: normalizeMonitoredCourseIds(data.id_mata_kuliah_dipantau),
   };
-}
-
-function isMissingNotifyTaskOpenColumnError(error: { code?: string | null; message?: string | null; details?: string | null; hint?: string | null } | null | undefined): boolean {
-  if (!error) {
-    return false;
-  }
-
-  const haystack = [error.message, error.details, error.hint]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-
-  return (
-    error.code === 'PGRST204' ||
-    error.code === '42703' ||
-    (haystack.includes('notify_task_open') &&
-      (haystack.includes('column') || haystack.includes('schema cache')))
-  );
 }
 
 async function ensureAppUser(input: {
@@ -168,9 +150,9 @@ async function ensureAppUser(input: {
 
   if (!nim || !fullname) {
     const { data: existing, error: existingError } = await supabase
-      .from('app_users')
-      .select('id,moodle_user_id')
-      .eq('moodle_user_id', input.moodleUserId)
+      .from('tabel_mahasiswa')
+      .select('id,id_pengguna_moodle')
+      .eq('id_pengguna_moodle', input.moodleUserId)
       .maybeSingle();
 
     if (existingError) {
@@ -185,20 +167,20 @@ async function ensureAppUser(input: {
   }
 
   const { data, error } = await supabase
-    .from('app_users')
+    .from('tabel_mahasiswa')
     .upsert(
       {
-        moodle_user_id: input.moodleUserId,
+        id_pengguna_moodle: input.moodleUserId,
         nim,
-        fullname,
-        moodle_token: input.moodleToken,
-        token_updated_at: new Date().toISOString(),
+        nama_lengkap: fullname,
+        token_moodle: input.moodleToken,
+        token_diperbarui_pada: new Date().toISOString(),
       },
       {
-        onConflict: 'moodle_user_id',
+        onConflict: 'id_pengguna_moodle',
       }
     )
-    .select('id,moodle_user_id')
+    .select('id,id_pengguna_moodle')
     .single();
 
   if (error) {
@@ -207,12 +189,12 @@ async function ensureAppUser(input: {
 
   const appUser = data as AppUserRow;
 
-  await supabase.from('user_settings').upsert(
+  await supabase.from('tabel_pengaturan_mahasiswa').upsert(
     {
-      app_user_id: appUser.id,
+      id_mahasiswa: appUser.id,
     },
     {
-      onConflict: 'app_user_id',
+      onConflict: 'id_mahasiswa',
       ignoreDuplicates: false,
     }
   );
@@ -264,33 +246,12 @@ Deno.serve(async (request) => {
 
     if (action === 'load-settings') {
       const { data, error } = await supabase
-        .from('user_settings')
+        .from('tabel_pengaturan_mahasiswa')
         .select(
-          'notify_new_task,notify_deadline_h1,notify_deadline_today,notify_task_open,notify_attendance,poll_interval_minutes,monitored_course_ids'
+          'notifikasi_tugas_baru,notifikasi_deadline_h1,notifikasi_deadline_hari_ini,notifikasi_tugas_dibuka,notifikasi_absensi,interval_sinkronisasi_menit,id_mata_kuliah_dipantau'
         )
-        .eq('app_user_id', appUser.id)
+        .eq('id_mahasiswa', appUser.id)
         .maybeSingle();
-
-      if (error && isMissingNotifyTaskOpenColumnError(error)) {
-        const { data: legacyData, error: legacyError } = await supabase
-          .from('user_settings')
-          .select(
-            'notify_new_task,notify_deadline_h1,notify_deadline_today,notify_attendance,poll_interval_minutes,monitored_course_ids'
-          )
-          .eq('app_user_id', appUser.id)
-          .maybeSingle();
-
-        if (legacyError) {
-          throw new Error(legacyError.message);
-        }
-
-        return jsonResponse(200, {
-          appUserId: appUser.id,
-          settings: legacyData
-            ? toRemoteUserSettings(legacyData as Record<string, unknown>, false)
-            : null,
-        });
-      }
 
       if (error) {
         throw new Error(error.message);
@@ -298,7 +259,7 @@ Deno.serve(async (request) => {
 
       return jsonResponse(200, {
         appUserId: appUser.id,
-        settings: data ? toRemoteUserSettings(data as Record<string, unknown>, true) : null,
+        settings: data ? toRemoteUserSettings(data as Record<string, unknown>) : null,
       });
     }
 
@@ -312,40 +273,25 @@ Deno.serve(async (request) => {
       }
 
       const basePayload = {
-        app_user_id: appUser.id,
-        notify_new_task: settings.notifyNewTask,
-        notify_deadline_h1: settings.notifyDeadlineH1,
-        notify_deadline_today: settings.notifyDeadlineToday,
-        notify_attendance: settings.notifyAttendance,
-        poll_interval_minutes: settings.pollIntervalMinutes,
-        monitored_course_ids: settings.monitoredCourseIds,
-        updated_at: new Date().toISOString(),
+        id_mahasiswa: appUser.id,
+        notifikasi_tugas_baru: settings.notifyNewTask,
+        notifikasi_deadline_h1: settings.notifyDeadlineH1,
+        notifikasi_deadline_hari_ini: settings.notifyDeadlineToday,
+        notifikasi_absensi: settings.notifyAttendance,
+        interval_sinkronisasi_menit: settings.pollIntervalMinutes,
+        id_mata_kuliah_dipantau: settings.monitoredCourseIds,
+        diperbarui_pada: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from('user_settings').upsert(
+      const { error } = await supabase.from('tabel_pengaturan_mahasiswa').upsert(
         {
           ...basePayload,
-          notify_task_open: settings.notifyTaskOpen,
+          notifikasi_tugas_dibuka: settings.notifyTaskOpen,
         },
         {
-          onConflict: 'app_user_id',
+          onConflict: 'id_mahasiswa',
         }
       );
-
-      if (error && isMissingNotifyTaskOpenColumnError(error)) {
-        const { error: legacyError } = await supabase.from('user_settings').upsert(basePayload, {
-          onConflict: 'app_user_id',
-        });
-
-        if (legacyError) {
-          throw new Error(legacyError.message);
-        }
-
-        return jsonResponse(200, {
-          appUserId: appUser.id,
-          result: 'legacy-notify-task-open',
-        });
-      }
 
       if (error) {
         throw new Error(error.message);
@@ -371,28 +317,28 @@ Deno.serve(async (request) => {
 
       if (deviceKey) {
         const { error: staleDeviceError } = await supabase
-          .from('user_devices')
+          .from('tabel_perangkat_mahasiswa')
           .update({
-            active: false,
-            device_key: null,
-            updated_at: nowIso,
+            aktif: false,
+            kunci_perangkat: null,
+            diperbarui_pada: nowIso,
           })
-          .eq('device_key', deviceKey)
-          .neq('expo_push_token', pushToken);
+          .eq('kunci_perangkat', deviceKey)
+          .neq('token_perangkat', pushToken);
 
         if (staleDeviceError) {
           throw new Error(staleDeviceError.message);
         }
 
         const { error: legacyCleanupError } = await supabase
-          .from('user_devices')
+          .from('tabel_perangkat_mahasiswa')
           .update({
-            active: false,
-            updated_at: nowIso,
+            aktif: false,
+            diperbarui_pada: nowIso,
           })
-          .eq('app_user_id', appUser.id)
-          .eq('platform', platform)
-          .is('device_key', null);
+          .eq('id_mahasiswa', appUser.id)
+          .eq('platform_perangkat', platform)
+          .is('kunci_perangkat', null);
 
         if (legacyCleanupError) {
           throw new Error(legacyCleanupError.message);
@@ -400,16 +346,16 @@ Deno.serve(async (request) => {
       }
 
       const devicePayload = {
-        app_user_id: appUser.id,
-        expo_push_token: pushToken,
-        device_key: deviceKey || null,
-        platform,
-        active: true,
-        last_seen_at: nowIso,
+        id_mahasiswa: appUser.id,
+        token_perangkat: pushToken,
+        kunci_perangkat: deviceKey || null,
+        platform_perangkat: platform,
+        aktif: true,
+        terakhir_aktif_pada: nowIso,
       };
 
-      const { error } = await supabase.from('user_devices').upsert(devicePayload, {
-        onConflict: 'expo_push_token',
+      const { error } = await supabase.from('tabel_perangkat_mahasiswa').upsert(devicePayload, {
+        onConflict: 'token_perangkat',
       });
 
       if (error) {
@@ -434,21 +380,21 @@ Deno.serve(async (request) => {
       }
 
       const updatePayload = {
-        active: false,
-        updated_at: new Date().toISOString(),
+        aktif: false,
+        diperbarui_pada: new Date().toISOString(),
       };
 
       const { error } = deviceKey
         ? await supabase
-            .from('user_devices')
+            .from('tabel_perangkat_mahasiswa')
             .update(updatePayload)
-            .eq('app_user_id', appUser.id)
-            .eq('device_key', deviceKey)
+            .eq('id_mahasiswa', appUser.id)
+            .eq('kunci_perangkat', deviceKey)
         : await supabase
-            .from('user_devices')
+            .from('tabel_perangkat_mahasiswa')
             .update(updatePayload)
-            .eq('app_user_id', appUser.id)
-            .eq('expo_push_token', pushToken);
+            .eq('id_mahasiswa', appUser.id)
+            .eq('token_perangkat', pushToken);
 
       if (error) {
         throw new Error(error.message);

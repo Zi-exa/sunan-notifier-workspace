@@ -22,16 +22,16 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 type SettingsRow = {
-  app_user_id: string;
-  notify_deadline_h1: boolean;
-  notify_deadline_today: boolean;
+  id_mahasiswa: string;
+  notifikasi_deadline_h1: boolean;
+  notifikasi_deadline_hari_ini: boolean;
 };
 
 type SnapshotRow = {
-  app_user_id: string;
-  assignment_id: number;
+  id_mahasiswa: string;
+  id_tugas: number;
   status: string;
-  payload: {
+  isi_data: {
     id: number;
     name: string;
     dueDate: number;
@@ -93,8 +93,8 @@ Deno.serve(async (request) => {
 
   try {
     const settingsResult = await supabase
-      .from('user_settings')
-      .select('app_user_id,notify_deadline_h1,notify_deadline_today');
+      .from('tabel_pengaturan_mahasiswa')
+      .select('id_mahasiswa,notifikasi_deadline_h1,notifikasi_deadline_hari_ini');
 
     if (settingsResult.error) {
       throw new Error(settingsResult.error.message);
@@ -103,12 +103,12 @@ Deno.serve(async (request) => {
     const settingsRows = (settingsResult.data ?? []) as SettingsRow[];
     const settingsMap = new Map<string, SettingsRow>();
     for (const row of settingsRows) {
-      settingsMap.set(row.app_user_id, row);
+      settingsMap.set(row.id_mahasiswa, row);
     }
 
     const snapshotsResult = await supabase
-      .from('task_snapshots')
-      .select('app_user_id,assignment_id,status,payload');
+      .from('tabel_snapshot_tugas')
+      .select('id_mahasiswa,id_tugas,status,isi_data');
 
     if (snapshotsResult.error) {
       throw new Error(snapshotsResult.error.message);
@@ -128,87 +128,87 @@ Deno.serve(async (request) => {
         continue;
       }
 
-      const settings = settingsMap.get(snapshot.app_user_id);
+      const settings = settingsMap.get(snapshot.id_mahasiswa);
       if (!settings) {
         continue;
       }
 
-      const dueDateUnix = Number(snapshot.payload?.dueDate ?? 0);
+      const dueDateUnix = Number(snapshot.isi_data?.dueDate ?? 0);
       if (!dueDateUnix) {
         continue;
       }
 
       const dueDateKey = toJakartaDateKey(new Date(dueDateUnix * 1000));
 
-      if (settings.notify_deadline_h1 && dueDateKey === tomorrowKey) {
+      if (settings.notifikasi_deadline_h1 && dueDateKey === tomorrowKey) {
         const scheduleAt = scheduleAtSevenJakarta(todayKey);
 
         queueRows.push({
-          app_user_id: snapshot.app_user_id,
-          notification_type: 'deadline_h1',
-          title: 'Pengingat Deadline H-1',
-          body: `${snapshot.payload.name} akan deadline besok.`,
-          payload: {
-            taskId: snapshot.assignment_id,
+          id_mahasiswa: snapshot.id_mahasiswa,
+          jenis_notifikasi: 'deadline_h1',
+          judul_notifikasi: 'Pengingat Deadline H-1',
+          isi_notifikasi: `${snapshot.isi_data.name} akan deadline besok.`,
+          isi_data: {
+            taskId: snapshot.id_tugas,
             kind: 'deadline_h1',
           },
-          dedupe_key: buildDeadlineDedupeKey(
+          kunci_anti_duplikat: buildDeadlineDedupeKey(
             'deadline_h1',
-            snapshot.app_user_id,
-            snapshot.assignment_id,
+            snapshot.id_mahasiswa,
+            snapshot.id_tugas,
             todayKey
           ),
-          schedule_at: scheduleAt.toISOString(),
+          jadwal_kirim: scheduleAt.toISOString(),
         });
       }
 
-      if (settings.notify_deadline_today && dueDateKey === todayKey) {
+      if (settings.notifikasi_deadline_hari_ini && dueDateKey === todayKey) {
         let scheduleAt = scheduleAtSevenJakarta(todayKey);
         if (scheduleAt.getTime() < now.getTime()) {
           scheduleAt = now;
         }
 
         queueRows.push({
-          app_user_id: snapshot.app_user_id,
-          notification_type: 'deadline_today',
-          title: 'Pengingat Deadline Hari Ini',
-          body: `${snapshot.payload.name} deadline hari ini.`,
-          payload: {
-            taskId: snapshot.assignment_id,
+          id_mahasiswa: snapshot.id_mahasiswa,
+          jenis_notifikasi: 'deadline_today',
+          judul_notifikasi: 'Pengingat Deadline Hari Ini',
+          isi_notifikasi: `${snapshot.isi_data.name} deadline hari ini.`,
+          isi_data: {
+            taskId: snapshot.id_tugas,
             kind: 'deadline_today',
           },
-          dedupe_key: buildDeadlineDedupeKey(
+          kunci_anti_duplikat: buildDeadlineDedupeKey(
             'deadline_today',
-            snapshot.app_user_id,
-            snapshot.assignment_id,
+            snapshot.id_mahasiswa,
+            snapshot.id_tugas,
             todayKey
           ),
-          schedule_at: scheduleAt.toISOString(),
+          jadwal_kirim: scheduleAt.toISOString(),
         });
       }
 
-      if (settings.notify_deadline_today) {
+      if (settings.notifikasi_deadline_hari_ini) {
         const closingReminderDate = buildTaskClosingReminderDate(dueDateUnix, now);
         if (closingReminderDate) {
           queueRows.push({
-            app_user_id: snapshot.app_user_id,
-            notification_type: 'task_closing',
-            title: 'Tugas Hampir Deadline',
-            body: `${snapshot.payload.name} deadline kurang dari 30 menit lagi.`,
-            payload: {
-              taskId: snapshot.assignment_id,
+            id_mahasiswa: snapshot.id_mahasiswa,
+            jenis_notifikasi: 'task_closing',
+            judul_notifikasi: 'Tugas Hampir Deadline',
+            isi_notifikasi: `${snapshot.isi_data.name} deadline kurang dari 30 menit lagi.`,
+            isi_data: {
+              taskId: snapshot.id_tugas,
               kind: 'task_closing',
             },
-            dedupe_key: `closing-${snapshot.app_user_id}-${snapshot.assignment_id}-${dueDateUnix}`,
-            schedule_at: closingReminderDate.toISOString(),
+            kunci_anti_duplikat: `closing-${snapshot.id_mahasiswa}-${snapshot.id_tugas}-${dueDateUnix}`,
+            jadwal_kirim: closingReminderDate.toISOString(),
           });
         }
       }
     }
 
     if (queueRows.length > 0) {
-      const insertResult = await supabase.from('notification_queue').insert(queueRows, {
-        onConflict: 'dedupe_key',
+      const insertResult = await supabase.from('tabel_antrian_notifikasi').insert(queueRows, {
+        onConflict: 'kunci_anti_duplikat',
         ignoreDuplicates: true,
       });
 
