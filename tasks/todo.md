@@ -18,7 +18,8 @@
 - Uji polling nyata berhasil membuat 19 row absensi. Jadwal terdekat 10 Juni 2026: 12.00, 13.00, dan 15.00 WIB.
 - Android sekarang memprioritaskan token FCM native karena delivery Expo token sebelumnya gagal mengambil kredensial FCM.
 - EAS Update production `ff2782cf-c86a-4076-90a5-4b2d962324a4` sudah diterbitkan untuk runtime `1.0.1`.
-- Verifikasi delivery ke HP menunggu aplikasi dibuka sekali agar update aktif dan token native terdaftar.
+- Aplikasi berhasil mendaftarkan token FCM native pada 10 Juni 2026 pukul 08.48 WIB; token Expo lama untuk akun yang sama sudah dinonaktifkan.
+- Uji `Tes Notifikasi Absensi` berhasil dikirim melalui FCM pada 10 Juni 2026 pukul 08.59 WIB tanpa error.
 
 ## 2026-06-06 - Ubah nama tabel dan kolom Supabase ke Bahasa Indonesia
 
