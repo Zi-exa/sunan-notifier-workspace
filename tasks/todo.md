@@ -1,5 +1,19 @@
 # Todo
 
+## 2026-06-10 - Verifikasi notifikasi tugas
+
+- [x] Periksa antrean dan status pengiriman notifikasi tugas terbaru.
+- [x] Pastikan akun menggunakan satu token FCM aktif.
+- [x] Kirim satu notifikasi uji tugas dan periksa hasil pengirimannya.
+- [x] Dokumentasikan hasil, commit, dan push.
+
+### Review
+
+- Akun menggunakan satu token FCM aktif; seluruh token Expo lama sudah nonaktif.
+- Kegagalan notifikasi tugas lama berasal dari jalur Expo sebelum migrasi token FCM.
+- Pengingat `task_closing` mendatang tetap terjadwal untuk 12 dan 17 Juni 2026.
+- Uji `Tes Notifikasi Tugas` berhasil dikirim pada 10 Juni 2026 pukul 09.11 WIB tanpa error.
+
 ## 2026-06-10 - Perbaiki notifikasi absensi tidak muncul
 
 - [x] Audit polling SUNAN, antrean absensi, cron pengiriman, dan perangkat aktif.
