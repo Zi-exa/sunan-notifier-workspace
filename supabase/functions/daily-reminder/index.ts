@@ -207,7 +207,7 @@ Deno.serve(async (request) => {
     }
 
     if (queueRows.length > 0) {
-      const insertResult = await supabase.from('tabel_antrian_notifikasi').insert(queueRows, {
+      const insertResult = await supabase.from('tabel_antrian_notifikasi').upsert(queueRows, {
         onConflict: 'kunci_anti_duplikat',
         ignoreDuplicates: true,
       });

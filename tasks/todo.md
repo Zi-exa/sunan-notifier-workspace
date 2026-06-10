@@ -1,5 +1,25 @@
 # Todo
 
+## 2026-06-10 - Perbaiki notifikasi absensi tidak muncul
+
+- [x] Audit polling SUNAN, antrean absensi, cron pengiriman, dan perangkat aktif.
+- [x] Identifikasi akar masalah notifikasi absensi.
+- [x] Terapkan perbaikan minimal pada backend dan registrasi token Android.
+- [x] Deploy dan uji pembentukan antrean memakai data SUNAN nyata.
+- [x] Verifikasi typecheck, lint, migration, EAS Update, database, dan log runtime.
+- [x] Tulis review hasil, commit, dan push perubahan.
+
+### Review
+
+- Polling sehat dan mendeteksi 5 event absensi masa depan, tetapi sebelumnya tidak pernah ada row `attendance_*`.
+- Akar masalah antrean: `.insert()` mengabaikan opsi dedupe dan satu key lama menggagalkan seluruh batch. Fungsi sekarang memakai `.upsert()` dan error antrean tidak lagi ditelan.
+- Index dedupe diubah dari partial unique menjadi full unique agar kompatibel dengan `ON CONFLICT`; nilai `NULL` tetap boleh berulang di PostgreSQL.
+- Backend sekarang menjadwalkan absensi H-1, 1 jam sebelum buka, saat buka, dan 30 menit sebelum tutup sejak event pertama kali ditemukan.
+- Uji polling nyata berhasil membuat 19 row absensi. Jadwal terdekat 10 Juni 2026: 12.00, 13.00, dan 15.00 WIB.
+- Android sekarang memprioritaskan token FCM native karena delivery Expo token sebelumnya gagal mengambil kredensial FCM.
+- EAS Update production `ff2782cf-c86a-4076-90a5-4b2d962324a4` sudah diterbitkan untuk runtime `1.0.1`.
+- Verifikasi delivery ke HP menunggu aplikasi dibuka sekali agar update aktif dan token native terdaftar.
+
 ## 2026-06-06 - Ubah nama tabel dan kolom Supabase ke Bahasa Indonesia
 
 - [x] Audit seluruh referensi schema aktif di Edge Function dan aplikasi mobile.

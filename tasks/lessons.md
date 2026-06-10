@@ -20,3 +20,8 @@
 ## 2026-06-05
 
 - Kalau HP pernah dipakai login akun lain, cek dua sumber nyangkut: row device/token di backend dan scheduled local notifications di perangkat. Membersihkan backend saja tidak menghapus notifikasi lokal yang sudah dijadwalkan.
+
+## 2026-06-10
+
+- Setelah mengubah schema atau scheduler notifikasi, jangan cukup memverifikasi jumlah event yang terdeteksi. Pastikan setiap jenis notifikasi benar-benar menghasilkan row antrean dan lakukan uji delivery ke jenis token perangkat yang aktif.
+- Jangan memakai opsi `onConflict` dan `ignoreDuplicates` pada `.insert()` Supabase. Gunakan `.upsert()`; jika tidak, satu dedupe key lama dapat menggagalkan seluruh batch notifikasi baru. Error insert antrean tidak boleh ditelan.
