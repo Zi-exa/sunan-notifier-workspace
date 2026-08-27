@@ -137,6 +137,10 @@ const ATTENDANCE_KEYWORDS = [
 ];
 const ATTENDANCE_MODULE_NAMES = new Set(['attendance', 'mod_attendance']);
 const ATTENDANCE_URL_HINTS = ['/mod/attendance/', '/attendance/view.php'];
+const ATTENDANCE_LOOKAHEAD_SECONDS = 7 * 24 * 60 * 60;
+const ATTENDANCE_H1_SECONDS = 24 * 60 * 60;
+const ATTENDANCE_PREOPEN_SECONDS = 60 * 60;
+const ATTENDANCE_CLOSING_SECONDS = 30 * 60;
 
 const jakartaDateFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Jakarta',
@@ -414,7 +418,7 @@ async function getAttendanceEvents(
   const nowUnix = Math.floor(now.getTime() / 1000);
   const windowSeconds = pollingWindowMinutes * 60;
   const timeStart = nowUnix - Math.max(windowSeconds, 24 * 60 * 60);
-  const timeEnd = nowUnix + windowSeconds;
+  const timeEnd = nowUnix + ATTENDANCE_LOOKAHEAD_SECONDS;
   let actionEvents: MoodleCalendarEvent[] = [];
   let upcomingEvents: MoodleCalendarEvent[] = [];
 
@@ -444,20 +448,13 @@ async function getAttendanceEvents(
 
 function resolveAttendanceOpenSchedule(
   event: MoodleCalendarEvent,
-  now: Date,
-  pollingWindowMinutes: number
+  now: Date
 ): Date | null {
   const nowMs = now.getTime();
   const startsAtMs = event.timestart * 1000;
-  const pollingWindowMs = pollingWindowMinutes * 60 * 1000;
-  const startsWithinNextWindow = startsAtMs >= nowMs && startsAtMs <= nowMs + pollingWindowMs;
 
-  if (startsWithinNextWindow) {
+  if (startsAtMs >= nowMs) {
     return new Date(startsAtMs);
-  }
-
-  if (startsAtMs > nowMs) {
-    return null;
   }
 
   if (event.timeduration && event.timeduration > 0) {
@@ -468,6 +465,26 @@ function resolveAttendanceOpenSchedule(
   return toJakartaDateKey(new Date(startsAtMs)) === toJakartaDateKey(now)
     ? new Date(nowMs)
     : null;
+}
+
+function resolveAttendanceReminderSchedule(
+  targetUnixSeconds: number,
+  now: Date,
+  recoveryWindowMinutes: number
+): Date | null {
+  const targetMs = targetUnixSeconds * 1000;
+  const nowMs = now.getTime();
+
+  if (!Number.isFinite(targetMs)) {
+    return null;
+  }
+
+  if (targetMs > nowMs) {
+    return new Date(targetMs);
+  }
+
+  const recoveryWindowMs = recoveryWindowMinutes * 60 * 1000;
+  return nowMs - targetMs <= recoveryWindowMs ? new Date(nowMs) : null;
 }
 
 function toAssignmentSnapshot(courseName: string, assignment: MoodleAssignment): AssignmentSnapshotPayload {
@@ -722,6 +739,11 @@ Deno.serve(async (request) => {
     let snapshotsUpserted = 0;
     let notificationsQueued = 0;
     let attendanceEventsDetected = 0;
+    let attendanceEventsFuture = 0;
+    let attendanceEventsActive = 0;
+    let attendanceEventsExpired = 0;
+    let attendanceNotificationsPlanned = 0;
+    let earliestFutureAttendanceAt: number | null = null;
 
     for (const user of users) {
       const settings = resolveSettings(settingsMap.get(user.id));
@@ -906,8 +928,36 @@ Deno.serve(async (request) => {
 
           for (const event of attendanceEvents) {
             const startsAtMs = event.timestart * 1000;
-            const openScheduleDate = resolveAttendanceOpenSchedule(
-              event,
+            const nowMs = now.getTime();
+            const eventClosesAtMs =
+              event.timeduration && event.timeduration > 0
+                ? startsAtMs + event.timeduration * 1000
+                : null;
+
+            if (startsAtMs > nowMs) {
+              attendanceEventsFuture += 1;
+              earliestFutureAttendanceAt =
+                earliestFutureAttendanceAt === null
+                  ? event.timestart
+                  : Math.min(earliestFutureAttendanceAt, event.timestart);
+            } else if (
+              (eventClosesAtMs !== null && eventClosesAtMs > nowMs) ||
+              (eventClosesAtMs === null &&
+                toJakartaDateKey(new Date(startsAtMs)) === toJakartaDateKey(now))
+            ) {
+              attendanceEventsActive += 1;
+            } else {
+              attendanceEventsExpired += 1;
+            }
+
+            const openScheduleDate = resolveAttendanceOpenSchedule(event, now);
+            const h1ScheduleDate = resolveAttendanceReminderSchedule(
+              event.timestart - ATTENDANCE_H1_SECONDS,
+              now,
+              settings.interval_sinkronisasi_menit
+            );
+            const preopenScheduleDate = resolveAttendanceReminderSchedule(
+              event.timestart - ATTENDANCE_PREOPEN_SECONDS,
               now,
               settings.interval_sinkronisasi_menit
             );
@@ -917,45 +967,78 @@ Deno.serve(async (request) => {
                 ? startsAtMs + event.timeduration * 1000
                 : null;
 
-            const isClosingSoon =
-              closesAtMs !== null &&
-              closesAtMs > now.getTime() &&
-              closesAtMs - now.getTime() <= 30 * 60 * 1000;
+            const closesAtUnix =
+              closesAtMs !== null ? Math.floor(closesAtMs / 1000) : null;
+            const closingScheduleDate =
+              closesAtUnix !== null
+                ? resolveAttendanceReminderSchedule(
+                    closesAtUnix - ATTENDANCE_CLOSING_SECONDS,
+                    now,
+                    settings.interval_sinkronisasi_menit
+                  )
+                : null;
 
-            if (!openScheduleDate) {
-              if (!isClosingSoon) {
-                continue;
-              }
+            if (h1ScheduleDate && event.timestart > Math.floor(now.getTime() / 1000)) {
+              attendanceNotificationsPlanned += 1;
+              queueRows.push({
+                id_mahasiswa: user.id,
+                jenis_notifikasi: 'attendance_h1',
+                judul_notifikasi: 'Absensi Besok',
+                isi_notifikasi: `${event.name} dibuka besok. Siapkan absensi Anda.`,
+                isi_data: {
+                  attendanceEventId: event.id,
+                  kind: 'attendance_h1',
+                },
+                kunci_anti_duplikat: `attendance-h1-${user.id}-${event.id}-${event.timestart}`,
+                jadwal_kirim: h1ScheduleDate.toISOString(),
+              });
+            }
+
+            if (preopenScheduleDate && event.timestart > Math.floor(now.getTime() / 1000)) {
+              attendanceNotificationsPlanned += 1;
+              queueRows.push({
+                id_mahasiswa: user.id,
+                jenis_notifikasi: 'attendance_preopen',
+                judul_notifikasi: 'Absensi 1 Jam Lagi',
+                isi_notifikasi: `${event.name} dibuka 1 jam lagi.`,
+                isi_data: {
+                  attendanceEventId: event.id,
+                  kind: 'attendance_preopen',
+                },
+                kunci_anti_duplikat: `attendance-preopen-${user.id}-${event.id}-${event.timestart}`,
+                jadwal_kirim: preopenScheduleDate.toISOString(),
+              });
             }
 
             if (openScheduleDate) {
+              attendanceNotificationsPlanned += 1;
               queueRows.push({
                 id_mahasiswa: user.id,
                 jenis_notifikasi: 'attendance_open',
                 judul_notifikasi: 'Absensi Dibuka',
                 isi_notifikasi: `${event.name} sudah dibuka. Jangan lupa isi absensi.`,
                 isi_data: {
-                  eventId: event.id,
+                  attendanceEventId: event.id,
                   kind: 'attendance_open',
                 },
-                kunci_anti_duplikat: `attendance-open-${user.id}-${event.id}`,
+                kunci_anti_duplikat: `attendance-open-${user.id}-${event.id}-${event.timestart}`,
                 jadwal_kirim: openScheduleDate.toISOString(),
               });
             }
 
-            if (isClosingSoon) {
-              const scheduleAt = new Date();
+            if (closingScheduleDate && closesAtUnix !== null) {
+              attendanceNotificationsPlanned += 1;
               queueRows.push({
                 id_mahasiswa: user.id,
                 jenis_notifikasi: 'attendance_closing',
                 judul_notifikasi: 'Absensi Segera Ditutup',
                 isi_notifikasi: `${event.name} akan segera ditutup. Segera isi absensi.`,
                 isi_data: {
-                  eventId: event.id,
+                  attendanceEventId: event.id,
                   kind: 'attendance_closing',
                 },
-                kunci_anti_duplikat: `attendance-closing-${user.id}-${event.id}-${toJakartaDateKey(now)}`,
-                jadwal_kirim: scheduleAt.toISOString(),
+                kunci_anti_duplikat: `attendance-closing-${user.id}-${event.id}-${closesAtUnix}`,
+                jadwal_kirim: closingScheduleDate.toISOString(),
               });
             }
           }
@@ -975,14 +1058,16 @@ Deno.serve(async (request) => {
       }
 
       if (queueRows.length > 0) {
-        const queueResult = await supabase.from('tabel_antrian_notifikasi').insert(queueRows, {
+        const queueResult = await supabase.from('tabel_antrian_notifikasi').upsert(queueRows, {
           onConflict: 'kunci_anti_duplikat',
           ignoreDuplicates: true,
         });
 
-        if (!queueResult.error) {
-          notificationsQueued += queueRows.length;
+        if (queueResult.error) {
+          throw new Error(`Gagal menyimpan antrean notifikasi: ${queueResult.error.message}`);
         }
+
+        notificationsQueued += queueRows.length;
       }
 
       usersProcessed += 1;
@@ -999,6 +1084,13 @@ Deno.serve(async (request) => {
             snapshots_upserted: snapshotsUpserted,
             notifications_queued: notificationsQueued,
             attendance_events_detected: attendanceEventsDetected,
+            attendance_events_future: attendanceEventsFuture,
+            attendance_events_active: attendanceEventsActive,
+            attendance_events_expired: attendanceEventsExpired,
+            attendance_notifications_planned: attendanceNotificationsPlanned,
+            earliest_future_attendance_at: earliestFutureAttendanceAt
+              ? new Date(earliestFutureAttendanceAt * 1000).toISOString()
+              : null,
           },
         })
         .eq('id', runId);

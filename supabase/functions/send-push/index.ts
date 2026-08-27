@@ -79,6 +79,7 @@ async function getFcmAccessToken(): Promise<string> {
   }
 
   const nowUnix = Math.floor(Date.now() / 1000);
+  const issuedAtUnix = nowUnix - 60;
 
   if (cachedFcmAccessToken && cachedFcmAccessToken.expiresAtUnix - 60 > nowUnix) {
     return cachedFcmAccessToken.token;
@@ -93,8 +94,8 @@ async function getFcmAccessToken(): Promise<string> {
     iss: fcmServiceAccount.client_email,
     scope: 'https://www.googleapis.com/auth/firebase.messaging',
     aud: fcmServiceAccount.token_uri ?? 'https://oauth2.googleapis.com/token',
-    iat: nowUnix,
-    exp: nowUnix + 3600,
+    iat: issuedAtUnix,
+    exp: issuedAtUnix + 3600,
   };
 
   const unsignedJwt = `${encodeBase64UrlString(JSON.stringify(jwtHeader))}.${encodeBase64UrlString(
@@ -223,7 +224,8 @@ async function sendViaFcmLegacy(
   pushToken: string,
   title: string,
   body: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  notificationTag: string
 ): Promise<{ ok: boolean; reason?: string }> {
   if (!fcmServerKey) {
     return { ok: false, reason: 'FCM_SERVER_KEY belum diset' };
@@ -240,6 +242,7 @@ async function sendViaFcmLegacy(
       notification: {
         title,
         body,
+        tag: notificationTag,
       },
       data,
       priority: 'high',
@@ -269,7 +272,8 @@ async function sendViaFcmV1(
   pushToken: string,
   title: string,
   body: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  notificationTag: string
 ): Promise<{ ok: boolean; reason?: string }> {
   if (!fcmServiceAccount) {
     return { ok: false, reason: 'FCM_SERVICE_ACCOUNT_JSON belum diset atau tidak valid' };
@@ -312,6 +316,9 @@ async function sendViaFcmV1(
           data: dataPayload,
           android: {
             priority: 'HIGH',
+            notification: {
+              tag: notificationTag,
+            },
           },
         },
       }),
@@ -340,18 +347,19 @@ async function deliverPush(
   pushToken: string,
   title: string,
   body: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  notificationTag: string
 ): Promise<{ ok: boolean; reason?: string }> {
   if (pushToken.startsWith('ExponentPushToken') || pushToken.startsWith('ExpoPushToken')) {
     return sendViaExpo(pushToken, title, body, data);
   }
 
   if (fcmServiceAccount) {
-    return sendViaFcmV1(pushToken, title, body, data);
+    return sendViaFcmV1(pushToken, title, body, data, notificationTag);
   }
 
   if (fcmServerKey) {
-    return sendViaFcmLegacy(pushToken, title, body, data);
+    return sendViaFcmLegacy(pushToken, title, body, data, notificationTag);
   }
 
   return {
@@ -377,14 +385,9 @@ Deno.serve(async (request) => {
   }
 
   try {
-    const queueResult = await supabase
-      .from('tabel_antrian_notifikasi')
-      .select('id,id_mahasiswa,judul_notifikasi,isi_notifikasi,isi_data')
-      .is('dikirim_pada', null)
-      .is('alasan_gagal', null)
-      .lte('jadwal_kirim', new Date().toISOString())
-      .order('jadwal_kirim', { ascending: true })
-      .limit(100);
+    const queueResult = await supabase.rpc('klaim_antrian_notifikasi', {
+      p_batas: 100,
+    });
 
     if (queueResult.error) {
       throw new Error(queueResult.error.message);
@@ -406,7 +409,10 @@ Deno.serve(async (request) => {
       if (!devices.length) {
         await supabase
           .from('tabel_antrian_notifikasi')
-          .update({ alasan_gagal: 'Tidak ada device aktif untuk user ini.' })
+          .update({
+            diproses_pada: null,
+            alasan_gagal: 'Tidak ada device aktif untuk user ini.',
+          })
           .eq('id', row.id);
         failedCount += 1;
         continue;
@@ -420,7 +426,8 @@ Deno.serve(async (request) => {
           device.token_perangkat,
           row.judul_notifikasi,
           row.isi_notifikasi,
-          row.isi_data
+          row.isi_data,
+          `sunan-notification-${row.id}`
         );
 
         if (delivery.ok) {
@@ -434,6 +441,7 @@ Deno.serve(async (request) => {
         await supabase
           .from('tabel_antrian_notifikasi')
           .update({
+            diproses_pada: null,
             dikirim_pada: new Date().toISOString(),
             alasan_gagal: failures.length ? failures.join('; ').slice(0, 800) : null,
           })
@@ -443,6 +451,7 @@ Deno.serve(async (request) => {
         await supabase
           .from('tabel_antrian_notifikasi')
           .update({
+            diproses_pada: null,
             alasan_gagal: failures.join('; ').slice(0, 800),
           })
           .eq('id', row.id);
