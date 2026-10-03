@@ -48,10 +48,10 @@ Buka `http://localhost:3000` atau `http://localhost:8080`.
 1. Import repo di https://vercel.com → Framework: Other → Output: `web`.
 2. Jadi `https://sunan-notifier.vercel.app`.
 
-**GitHub Pages:**
+**GitHub Pages (aktif ✅):**
 
-1. Repo Settings → Pages → Deploy from branch → pilih branch + folder `/web`.
-2. Jadi `https://zi-exa.github.io/sunan-notifier-workspace/`.
+Deploy otomatis via `.github/workflows/pages.yml` setiap ada push ke folder `web/`.
+Jadi `https://zi-exa.github.io/sunan-notifier-workspace/`.
 
 **Netlify Drop (paling cepat coba-coba):**
 
