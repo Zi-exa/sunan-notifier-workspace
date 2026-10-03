@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SUNAN Notifier — Pengingat Tugas & Absensi</title>
+  <meta name="description" content="Notifikasi otomatis untuk tugas baru, deadline, dan absensi SUNAN. Download gratis untuk Android." />
+  <meta name="theme-color" content="#2B7FFF" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232B7FFF'/%3E%3Cpath d='M32 12c-8 0-13 6-13 14v8l-4 7h34l-4-7v-8c0-8-5-14-13-14zm-5 34a5 5 0 0 0 10 0z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="#atas">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="28" height="28"><rect width="64" height="64" rx="14" fill="#2B7FFF"/><path d="M32 12c-8 0-13 6-13 14v8l-4 7h34l-4-7v-8c0-8-5-14-13-14zm-5 34a5 5 0 0 0 10 0z" fill="white"/></svg>
+        </span>
+        <span class="brand-text">SUNAN <strong>Notifier</strong></span>
+      </a>
+      <div class="nav-actions">
+        <a class="gh-btn" href="https://github.com/Zi-exa/sunan-notifier-workspace" target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+        <button id="themeBtn" class="theme-btn" type="button" aria-label="Mode gelap">&#127769;</button>
+        <a id="dlBtnHeader" class="btn btn-primary btn-sm" href="https://github.com/Zi-exa/sunan-notifier-releases/releases/download/v1.0.1/app-release.apk">Download</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="atas">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <p class="badge">Gratis &bull; Android</p>
+          <h1>Biar HP yang ngingetin tugasmu.</h1>
+          <p class="lead">Notifikasi otomatis untuk <strong>tugas baru</strong>, <strong>deadline</strong>, dan <strong>absensi</strong>.</p>
+          <div class="dl-card">
+            <a id="dlBtnHero" class="btn btn-primary btn-lg" href="https://github.com/Zi-exa/sunan-notifier-releases/releases/download/v1.0.1/app-release.apk">
+              &#11015; Download <span id="verBadge" class="ver-badge">v1.0.1</span>
+            </a>
+            <p class="dl-meta small"><span id="verText">Versi v1.0.1</span> &bull; <span id="sizeText">~25 MB</span> &bull; <span id="dateText">Android 8+</span> &bull; <span id="statusText">Cek versi&hellip;</span></p>
+          </div>
+          <div class="hero-actions">
+            <a class="btn btn-outline" href="#cara-install">Cara Install</a>
+          </div>
+        </div>
+        <div class="phone-wrap" aria-hidden="true">
+          <div class="float-chip chip-1"><span class="dot"></span>Tugas baru masuk</div>
+          <div class="float-chip chip-2"><span class="dot green"></span>Absensi dibuka</div>
+          <div class="m-push">
+            <span class="m-push-icon"></span>
+            <span class="m-push-text"><strong>SUNAN Notifier &bull; sekarang</strong>Deadline HARI INI: Quiz Etika Profesi</span>
+          </div>
+          <div class="phone">
+            <span class="phone-btn btn-power"></span>
+            <span class="phone-btn btn-vol-up"></span>
+            <span class="phone-btn btn-vol-down"></span>
+            <div class="phone-screen">
+              <div class="m-status"><span>09.41</span><span class="m-island"></span><span class="m-sig"><i></i><i></i><i></i><b></b></span></div>
+              <div class="m-appbar"><span class="m-logo"></span><span class="m-appname">SUNAN Notifier</span><span class="m-avatar">Z</span></div>
+              <div class="m-hero"><p class="m-hi">Halo, Zahir</p><p class="m-count"><strong>3</strong> tugas belum dikumpulkan</p><div class="m-bar"><span></span></div></div>
+              <div class="m-kpi"><div><strong>3</strong><small>Menunggu</small></div><div><strong>1</strong><small>Terlambat</small></div><div><strong>5</strong><small>Selesai</small></div></div>
+              <p class="m-sec">Deadline terdekat</p>
+              <div class="m-task red"><span class="m-task-bar"></span><div><strong>Quiz Etika Profesi</strong><small>Etika Profesi</small></div><em>Hari ini</em></div>
+              <div class="m-task amber"><span class="m-task-bar"></span><div><strong>Laporan Praktikum 4</strong><small>Sistem Basis Data</small></div><em>H-1</em></div>
+              <div class="m-task green"><span class="m-task-bar"></span><div><strong>Absensi: Mobile</strong><small>Pemrograman Mobile</small></div><em>Dibuka</em></div>
+              <div class="m-dock"><span class="on">●</span><span>●</span><span>●</span><span>●</span><span>●</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FITUR -->
+    <section class="section">
+      <div class="container">
+        <h2>Kenapa pakai ini?</h2>
+        <div class="grid3">
+          <div class="card"><h3>&#128276; Tugas baru</h3><p>Dosen posting tugas → HP bunyi.</p></div>
+          <div class="card"><h3>&#9200; Pengingat deadline</h3><p>Diingatkan H-1 dan H-hari.</p></div>
+          <div class="card"><h3>&#9989; Absensi</h3><p>Dibuka / mau ditutup → dikabari.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARA INSTALL -->
+    <section id="cara-install" class="section alt">
+      <div class="container">
+        <h2>Cara install (2 menit)</h2>
+        <ol class="steps">
+          <li><strong>Klik Download</strong> dari HP Android, tunggu selesai.</li>
+          <li><strong>Buka file-nya</strong>, klik <em>Install</em>. Kalau ada peringatan Play Protect, pilih <em>Tetap install</em>.</li>
+          <li><strong>Buka aplikasi → login</strong> pakai NIM + password SUNAN. Izinkan notifikasi.</li>
+        </ol>
+        <div class="qr-row">
+          <img id="qrImg" class="qr" alt="QR menuju halaman ini" width="140" height="140" />
+          <p class="sub">Buka web ini di laptop? Scan QR dari HP.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- UPDATE -->
+    <section class="section">
+      <div class="container">
+        <h2>Versi terbaru</h2>
+        <div class="card inline-card">
+          <p class="big" id="verText2">v1.0.1</p>
+          <p class="sub" id="releaseNote">Mengecek versi&hellip;</p>
+          <a id="dlBtnBottom" class="btn btn-primary" href="https://github.com/Zi-exa/sunan-notifier-releases/releases/download/v1.0.1/app-release.apk">&#11015; Download</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOG VERSI -->
+    <section class="section alt">
+      <div class="container">
+        <h2>Log versi</h2>
+        <div id="changelog" class="log-list">
+          <p class="sub">Memuat riwayat versi&hellip;</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container foot">
+      <p class="small"><strong>SUNAN Notifier</strong> &bull; Gratis &bull; &copy; <span id="year">2026</span></p>
+      <p class="small"><a class="gh-link" href="https://github.com/Zi-exa/sunan-notifier-workspace" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg> GitHub</a></p>
+    </div>
+  </footer>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
