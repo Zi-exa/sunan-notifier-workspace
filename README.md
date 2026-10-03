@@ -6,6 +6,7 @@ Project ini bukan aplikasi resmi UMK. Repo ini adalah workspace publik yang meng
 
 ## Link
 
+- Website download: [zi-exa.github.io/sunan-notifier-workspace](https://zi-exa.github.io/sunan-notifier-workspace/)
 - Workspace: [Zi-exa/sunan-notifier-workspace](https://github.com/Zi-exa/sunan-notifier-workspace)
 - Source mobile: [Zi-exa/sunan-notifier-mobile](https://github.com/Zi-exa/sunan-notifier-mobile)
 - Download APK terbaru v1.0.1: [app-release.apk](https://github.com/Zi-exa/sunan-notifier-releases/releases/download/v1.0.1/app-release.apk)
