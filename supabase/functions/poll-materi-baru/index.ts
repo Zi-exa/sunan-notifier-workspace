@@ -1,5 +1,5 @@
 /**
- * DRAFT: supabase/functions/poll-materi-baru/index.ts
+ * supabase/functions/poll-materi-baru/index.ts
  *
  * Edge Function untuk fitur "Materi Baru":
  *  - Ambil core_course_get_contents per mata kuliah yang dipantau
@@ -9,9 +9,8 @@
  * Dijalankan via pg_cron SETIAP 6 JAM (bukan 15 menit) supaya ringan.
  * Pola kode mengikuti poll-sunan-data/index.ts.
  *
- * Status: DRAFT, sesuaikan sebelum deploy. Prasyarat: migrasi
- * 20261007190000_tambah_fitur_materi_baru.sql sudah di-apply, dan
- * probe-sunan.js mengonfirmasi core_course_get_contents bisa dipanggil.
+ * Prasyarat: migrasi 20261007190000_tambah_fitur_materi_baru.sql sudah di-apply,
+ * dan probe-sunan.js mengonfirmasi core_course_get_contents bisa dipanggil.
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -66,6 +65,10 @@ type MateriSnapshot = {
 // Hanya tipe modul yang dianggap "materi" dan layak di-notify.
 // assign/quiz/forum/label sengaja dikecualikan (sudah di-cover fitur lain / bukan materi).
 const JENIS_MODUL_MATERI = new Set(['resource', 'url', 'page', 'book', 'folder']);
+
+// Batas request paralel ke Moodle per user. Tanpa batas, 1 user dengan banyak
+// matkul = puluhan request sekuensial yang bisa membuat function timeout.
+const KONKURENSI_MOODLE = 5;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -124,6 +127,24 @@ async function hashPayload(value: unknown): Promise<string> {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** Jalankan fn untuk setiap item dengan maksimal `limit` promise berjalan bersamaan. */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 function toMateriSnapshot(course: MoodleCourse, module: MoodleModule): MateriSnapshot {
   return {
     id: module.id,
@@ -139,6 +160,16 @@ function toMateriSnapshot(course: MoodleCourse, module: MoodleModule): MateriSna
       diubahPada: c.timemodified,
     })),
   };
+}
+
+/** Deep link terbaik untuk sebuah modul materi. */
+function quickLinkFor(course: MoodleCourse, module: MoodleModule, snapshot: MateriSnapshot): string {
+  // Modul bertipe "url": tujuan aslinya ada di contents[0].fileurl,
+  // bukan di halaman view modul.
+  if (module.modname === 'url' && module.contents?.[0]?.fileurl) {
+    return module.contents[0].fileurl;
+  }
+  return snapshot.tautanModul ?? `${moodleBaseUrl}/course/view.php?id=${course.id}`;
 }
 
 if (!supabaseUrl || !serviceRoleKey) {
@@ -208,30 +239,42 @@ Deno.serve(async (request) => {
       // Ambil snapshot lama SEKALI per user (bukan per matkul)
       const { data: snapshotLama } = await supabase
         .from('tabel_snapshot_materi')
-        .select('id_modul,hash_data')
+        .select('id_modul,id_mata_kuliah,hash_data')
         .eq('id_mahasiswa', mhs.id);
       const hashLamaMap = new Map<number, string>();
-      for (const row of (snapshotLama ?? []) as Array<{ id_modul: number; hash_data: string }>) {
+      const courseIdsSeen = new Set<number>();
+      for (
+        const row of (snapshotLama ?? []) as Array<{ id_modul: number; id_mata_kuliah: number; hash_data: string }>
+      ) {
         hashLamaMap.set(row.id_modul, row.hash_data);
+        courseIdsSeen.add(row.id_mata_kuliah);
       }
-      // ANTI-SPAM: user yang belum pernah di-scan -> jadikan baseline, jangan notif semua materi lama
-      const isBaseline = hashLamaMap.size === 0;
 
       const barisSnapshot: Record<string, unknown>[] = [];
       const barisAntrean: Record<string, unknown>[] = [];
       const sekarang = new Date();
 
-      for (const course of courseTerpantau) {
-        let sections: MoodleSection[];
+      // Isi course diambil paralel (maks KONKURENSI_MOODLE request jalan bareng).
+      // 1 matkul gagal -> lewati matkul itu saja, jangan gagalkan semua.
+      const hasilCourse = await mapWithConcurrency(courseTerpantau, KONKURENSI_MOODLE, async (course) => {
         try {
-          sections = await callMoodle<MoodleSection[]>(mhs.token_moodle, 'core_course_get_contents', {
+          const sections = await callMoodle<MoodleSection[]>(mhs.token_moodle, 'core_course_get_contents', {
             courseid: course.id,
           });
+          return { course, sections: sections ?? [] };
         } catch {
-          continue; // 1 matkul gagal -> lanjut ke matkul berikutnya, jangan gagalkan semua
+          return { course, sections: null as MoodleSection[] | null };
         }
+      });
 
-        for (const section of sections ?? []) {
+      for (const { course, sections } of hasilCourse) {
+        if (!sections) continue;
+        // ANTI-SPAM: matkul yang belum pernah di-scan -> jadikan baseline,
+        // jangan kirim notif untuk semua materi lamanya sekaligus
+        // (mencegah banjir notifikasi tiap semester baru / ganti matkul pantauan).
+        const isBaselineCourse = !courseIdsSeen.has(course.id);
+
+        for (const section of sections) {
           for (const module of section.modules ?? []) {
             if (!JENIS_MODUL_MATERI.has(module.modname)) continue;
             const snapshot = toMateriSnapshot(course, module);
@@ -250,7 +293,7 @@ Deno.serve(async (request) => {
             });
 
             const hashLama = hashLamaMap.get(snapshot.id);
-            if (!hashLama && !isBaseline) {
+            if (!hashLama && !isBaselineCourse) {
               barisAntrean.push({
                 id_mahasiswa: mhs.id,
                 jenis_notifikasi: 'materi_baru',
@@ -261,7 +304,7 @@ Deno.serve(async (request) => {
                   courseId: snapshot.idMataKuliah,
                   moduleId: snapshot.id,
                   modname: snapshot.jenisModul,
-                  quickLink: snapshot.tautanModul ?? `${moodleBaseUrl}/course/view.php?id=${snapshot.idMataKuliah}`,
+                  quickLink: quickLinkFor(course, module, snapshot),
                 },
                 kunci_anti_duplikat: `materi-baru-${mhs.id}-${snapshot.id}-${hashBaru}`,
                 jadwal_kirim: sekarang.toISOString(),
@@ -278,8 +321,14 @@ Deno.serve(async (request) => {
         if (!error) snapshotDisimpan += barisSnapshot.length;
       }
       if (barisAntrean.length > 0) {
-        const { error } = await supabase.from('tabel_antrian_notifikasi').insert(barisAntrean);
-        if (!error) notifikasiDimasukkan += barisAntrean.length;
+        // upsert + ignoreDuplicates: 1 kunci duplikat tidak boleh menggagalkan
+        // seluruh batch (pola sama seperti poll-sunan-data).
+        const { error } = await supabase.from('tabel_antrian_notifikasi').upsert(barisAntrean, {
+          onConflict: 'kunci_anti_duplikat',
+          ignoreDuplicates: true,
+        });
+        if (error) throw new Error(`Gagal menyimpan antrean notifikasi materi: ${error.message}`);
+        notifikasiDimasukkan += barisAntrean.length;
       }
       penggunaDiproses += 1;
     }

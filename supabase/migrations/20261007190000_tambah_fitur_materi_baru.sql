@@ -49,12 +49,17 @@ alter table public.tabel_antrian_notifikasi
 
 alter table public.tabel_antrian_notifikasi
   add constraint tabel_antrian_notifikasi_jenis_notifikasi_check
+  -- PENTING: daftar ini harus mencakup SEMUA tipe yang dipakai edge function lain.
+  -- 'attendance_h1' dan 'attendance_preopen' dipakai poll-sunan-data
+  -- (lihat migrasi 20260610011933) — jangan sampai hilang dari sini.
   check (jenis_notifikasi in (
     'new_task',
     'deadline_h1',
     'deadline_today',
     'task_open',
     'task_closing',
+    'attendance_h1',
+    'attendance_preopen',
     'attendance_open',
     'attendance_closing',
     'materi_baru'
