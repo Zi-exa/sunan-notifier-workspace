@@ -20,7 +20,7 @@ Tombol download otomatis mengambil rilis terbaru dari:
 `https://api.github.com/repos/Zi-exa/sunan-notifier-releases/releases/latest`
 
 mencari asset bernama `app-release.apk`. Kalau API gagal (offline/rate-limit),
-otomatis fallback ke `v1.0.1`.
+otomatis fallback ke `v1.1.0`.
 
 ## Coba lokal
 
@@ -65,5 +65,5 @@ Edit atas file `web/app.js`:
 var RELEASE_OWNER = "Zi-exa";
 var RELEASE_REPO = "sunan-notifier-releases";
 var ASSET_NAME = "app-release.apk";
-var FALLBACK_TAG = "v1.0.1";
+var FALLBACK_TAG = "v1.1.0";
 ```

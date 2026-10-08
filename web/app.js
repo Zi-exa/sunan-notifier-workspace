@@ -2,13 +2,13 @@
 var RELEASE_OWNER = "Zi-exa";
 var RELEASE_REPO = "sunan-notifier-releases";
 var ASSET_NAME = "app-release.apk";
-var FALLBACK_TAG = "v1.0.1";
+var FALLBACK_TAG = "v1.1.0";
 var FALLBACK_URL =
   "https://github.com/" + RELEASE_OWNER + "/" + RELEASE_REPO +
   "/releases/download/" + FALLBACK_TAG + "/" + ASSET_NAME;
 
 function formatMB(bytes) {
-  if (!bytes) return "~25 MB";
+  if (!bytes) return "~80 MB";
   return "~" + Math.max(1, Math.round(bytes / 1024 / 1024)) + " MB";
 }
 
