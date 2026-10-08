@@ -1,5 +1,71 @@
 # Todo
 
+## 2026-08-27 - Debug callgraph notifikasi
+
+- [x] Baca callgraph notifikasi dan tentukan simpul yang berisiko.
+- [x] Periksa log runtime `send-push` terbaru dan antrean notifikasi.
+- [x] Perbaiki race condition pengambilan antrean dan error FCM OAuth clock skew.
+- [x] Verifikasi database, fungsi backend, dan perilaku pengirim tanpa membuat spam notifikasi.
+- [x] Dokumentasikan hasil, commit, dan push.
+
+### Review
+
+- Callgraph menempatkan risiko pada jalur `send-push -> tabel_antrian_notifikasi -> deliverPush -> FCM`, bukan di UI card atau navigation.
+- `send-push` sekarang mengambil antrean lewat RPC atomik `klaim_antrian_notifikasi`, sehingga dua worker tidak bisa mengirim row yang sama bersamaan.
+- FCM JWT sekarang dibuat dengan `iat` mundur 60 detik untuk menghindari error clock skew `JWT issued at future`.
+- Android FCM diberi tag stabil `sunan-notification-{row.id}` agar retry FCM mengganti notifikasi yang sama, bukan menambah salinan baru.
+- Verifikasi lulus: migrasi remote sudah ada, fungsi `send-push` ter-deploy, pemicu kosong menghasilkan `queued:0 sent:0 failed:0`, uji FCM palsu menghasilkan error token tidak valid, dan `supabase db lint --linked --level error` bersih.
+
+## 2026-06-10 - Investigasi tes absensi terkirim ulang
+
+- [x] Audit row antrean dan waktu pengiriman tes absensi.
+- [x] Audit log pemanggilan `send-push` dan jumlah perangkat aktif.
+- [x] Audit handler notifikasi mobile untuk presentasi ganda.
+- [x] Terapkan perbaikan akar masalah dan verifikasi.
+- [x] Dokumentasikan hasil, commit, dan push.
+
+### Review
+
+- Database hanya memiliki satu row `Tes Notifikasi Absensi` dan satu waktu pengiriman; aplikasi mobile tidak menjadwalkan ulang notifikasi tes tersebut.
+- Celah duplikasi berada di `send-push`: dua eksekusi yang berdekatan dapat membaca row belum terkirim yang sama sebelum salah satunya menyimpan status akhir.
+- Antrean sekarang diklaim atomik memakai `FOR UPDATE SKIP LOCKED`; claim kedaluwarsa setelah 5 menit agar row dapat dipulihkan jika worker berhenti.
+- Uji claim membuktikan row yang sudah diklaim tidak diambil lagi. Tidak ada claim aktif yang tertinggal setelah verifikasi.
+
+## 2026-06-10 - Verifikasi notifikasi tugas
+
+- [x] Periksa antrean dan status pengiriman notifikasi tugas terbaru.
+- [x] Pastikan akun menggunakan satu token FCM aktif.
+- [x] Kirim satu notifikasi uji tugas dan periksa hasil pengirimannya.
+- [x] Dokumentasikan hasil, commit, dan push.
+
+### Review
+
+- Akun menggunakan satu token FCM aktif; seluruh token Expo lama sudah nonaktif.
+- Kegagalan notifikasi tugas lama berasal dari jalur Expo sebelum migrasi token FCM.
+- Pengingat `task_closing` mendatang tetap terjadwal untuk 12 dan 17 Juni 2026.
+- Uji `Tes Notifikasi Tugas` berhasil dikirim pada 10 Juni 2026 pukul 09.11 WIB tanpa error.
+
+## 2026-06-10 - Perbaiki notifikasi absensi tidak muncul
+
+- [x] Audit polling SUNAN, antrean absensi, cron pengiriman, dan perangkat aktif.
+- [x] Identifikasi akar masalah notifikasi absensi.
+- [x] Terapkan perbaikan minimal pada backend dan registrasi token Android.
+- [x] Deploy dan uji pembentukan antrean memakai data SUNAN nyata.
+- [x] Verifikasi typecheck, lint, migration, EAS Update, database, dan log runtime.
+- [x] Tulis review hasil, commit, dan push perubahan.
+
+### Review
+
+- Polling sehat dan mendeteksi 5 event absensi masa depan, tetapi sebelumnya tidak pernah ada row `attendance_*`.
+- Akar masalah antrean: `.insert()` mengabaikan opsi dedupe dan satu key lama menggagalkan seluruh batch. Fungsi sekarang memakai `.upsert()` dan error antrean tidak lagi ditelan.
+- Index dedupe diubah dari partial unique menjadi full unique agar kompatibel dengan `ON CONFLICT`; nilai `NULL` tetap boleh berulang di PostgreSQL.
+- Backend sekarang menjadwalkan absensi H-1, 1 jam sebelum buka, saat buka, dan 30 menit sebelum tutup sejak event pertama kali ditemukan.
+- Uji polling nyata berhasil membuat 19 row absensi. Jadwal terdekat 10 Juni 2026: 12.00, 13.00, dan 15.00 WIB.
+- Android sekarang memprioritaskan token FCM native karena delivery Expo token sebelumnya gagal mengambil kredensial FCM.
+- EAS Update production `ff2782cf-c86a-4076-90a5-4b2d962324a4` sudah diterbitkan untuk runtime `1.0.1`.
+- Aplikasi berhasil mendaftarkan token FCM native pada 10 Juni 2026 pukul 08.48 WIB; token Expo lama untuk akun yang sama sudah dinonaktifkan.
+- Uji `Tes Notifikasi Absensi` berhasil dikirim melalui FCM pada 10 Juni 2026 pukul 08.59 WIB tanpa error.
+
 ## 2026-06-06 - Ubah nama tabel dan kolom Supabase ke Bahasa Indonesia
 
 - [x] Audit seluruh referensi schema aktif di Edge Function dan aplikasi mobile.
@@ -51,6 +117,12 @@
 - [x] Verifikasi lint dan typecheck.
 - [x] Tulis ringkasan review hasil perubahan.
 
+## 2026-06-03 - Activity diagram aplikasi
+
+- [x] Buat activity diagram Mermaid sederhana.
+- [x] Render activity diagram ke PNG/SVG.
+- [x] Verifikasi hasil render dan dokumentasikan review.
+
 ## 2026-06-03 - Perbaiki notifikasi dobel dan icon notifikasi
 
 - [x] Audit jalur notifikasi lokal, push backend, dan konfigurasi icon Android.
@@ -59,6 +131,18 @@
 - [x] Tambahkan icon aplikasi untuk notifikasi Android.
 - [x] Verifikasi lint, typecheck, dan deploy backend yang berubah.
 - [x] Tulis ringkasan review hasil perubahan.
+
+## 2026-06-03 - Sequence diagram aplikasi
+
+- [x] Audit struktur aplikasi dan alur runtime utama.
+- [x] Buat sequence diagram Mermaid berbasis kode.
+- [x] Verifikasi diagram terhadap source dan dokumentasikan hasil review.
+
+## 2026-06-03 - Sederhanakan sequence diagram
+
+- [x] Catat koreksi keterbacaan diagram di lessons.
+- [x] Sederhanakan sequence diagram agar mudah dibaca.
+- [x] Render ulang PNG/SVG dan verifikasi hasil.
 
 ## 2026-06-02 - Tambah reminder absensi sebelum buka
 
@@ -144,6 +228,14 @@
 - Verifikasi:
   - `npm run typecheck`
   - `npm run lint`
+- Activity diagram aplikasi dibuat di `reports/activity_sunan_notifier.mmd`.
+- Diagram activity menampilkan keputusan utama: session login, validasi login, aplikasi aktif/background, ada perubahan data SUNAN, dan jenis notifikasi yang dibuka.
+- Render hasil activity diagram tersedia di:
+  - `reports/diagram-activity.png`
+  - `reports/diagram-activity.svg`
+- Verifikasi:
+  - `npx -y @mermaid-js/mermaid-cli -i reports\activity_sunan_notifier.mmd -o reports\diagram-activity.png`
+  - `npx -y @mermaid-js/mermaid-cli -i reports\activity_sunan_notifier.mmd -o reports\diagram-activity.svg`
 - Root cause dobel notifikasi paling mungkin berasal dari dua jalur aktif sekaligus: local notification yang dijadwalkan app dan remote push dari Supabase/FCM. Selain itu, token lama di `user_devices` bisa tetap aktif setelah token perangkat berubah.
 - Perbaikan mobile:
   - jika push token sudah `ready`, local scheduler membatalkan jadwal untuk jenis yang sudah ditangani remote push (`new_task`, deadline, `task_open`, `task_closing`, `attendance_open`, `attendance_closing`).
@@ -160,6 +252,15 @@
   - `npx supabase db push`
   - `npx supabase functions deploy mobile-data`
   - `npx supabase db query --linked ...` untuk memastikan kolom `device_key` sudah ada.
+- Sequence diagram aplikasi dibuat di `reports/sequence_sunan_notifier.mmd`.
+- Diagram disederhanakan agar mudah dibaca: 5 komponen utama, yaitu Mahasiswa, Aplikasi Mobile, SUNAN/Moodle API, Supabase Backend, dan Expo Push/FCM.
+- Alur yang ditampilkan sekarang fokus pada login, pendaftaran device, pengambilan data SUNAN, polling backend 15 menit, pengiriman push notification, dan navigasi dari notifikasi.
+- Render hasil diagram tersedia di:
+  - `reports/diagram-sequence.png`
+  - `reports/diagram-sequence.svg`
+- Verifikasi:
+  - `npx -y @mermaid-js/mermaid-cli -i reports\sequence_sunan_notifier.mmd -o reports\diagram-sequence.png`
+  - `npx -y @mermaid-js/mermaid-cli -i reports\sequence_sunan_notifier.mmd -o reports\diagram-sequence.svg`
 - Notifikasi absensi sekarang punya empat momen: H-1, 1 jam sebelum buka, saat dibuka, dan 30 menit sebelum ditutup.
 - Reminder H-1 dan 1 jam sebelum buka ikut memakai toggle `Notifikasi Absensi` yang sama; belum ada toggle terpisah agar perubahan tetap sederhana.
 - Tap notifikasi absensi H-1 dan 1 jam sebelum buka sekarang diarahkan ke tab `Absensi` dengan filter `Akan Datang`, sedangkan notifikasi buka/tutup tetap ke filter yang relevan.
@@ -197,3 +298,84 @@
 - Verifikasi:
   - `npm run typecheck`
   - `npm run lint`
+
+## 2026-08-19 — Whole-Application Static Callgraph
+
+- [x] Scope production runtime: Expo Router mobile app, reusable mobile components/hooks/stores, Moodle/Supabase/notification/update adapters, Android lifecycle, Supabase Edge Functions, SQL RPC/cron/database flows.
+- [ ] Extract every runtime function/callback and resolve intra-module, imported, JSX-render, dependency, data/value, and error-path edges.
+- [ ] Generate a single static Tailwind HTML artifact with a modern dark theme, overview process map, searchable/filterable detailed graph, node inspector, legend, and methodology/scope notes.
+- [ ] Verify source coverage, node/edge integrity, HTML structure/JavaScript syntax, and browser rendering.
+
+### Acceptance criteria
+
+- Every authored production runtime source file is represented or explicitly listed as declaration-only/excluded.
+- Function nodes carry source path/line, signature, role/category, and source excerpt where available.
+- Edges distinguish direct calls, implicit JSX rendering, callback registration, data/value flow, dependencies, and failures/recovery.
+- High-level mobile → Moodle/Supabase → database/queue → push → mobile process remains readable despite full-detail coverage.
+- Artifact opens without a build step and remains usable as one HTML file.
+
+## 2026-10-03 — Keandalan pengaturan dan notifikasi
+
+- [x] Tetapkan kontrak jam diam: aktif opsional, zona waktu Asia/Jakarta, dan pengiriman ditunda sampai jam selesai.
+- [x] Perbaiki UI pengaturan agar kegagalan sinkronisasi tidak ditampilkan sebagai sukses.
+- [x] Simpan dan muat jam diam melalui aplikasi, Edge Function, dan skema Supabase.
+- [x] Terapkan jam diam ke jalur push dan fallback notifikasi lokal.
+- [x] Ubah antrean push menjadi retryable dengan backoff, batas percobaan, dan penanganan token perangkat tidak valid.
+- [x] Tambahkan tes regresi untuk logika waktu/retry serta verifikasi typecheck, lint, dan migration SQL.
+
+### Review
+
+- Implementasi: jam diam WIB diterapkan untuk push dan fallback lokal; antrean push kini retry hingga lima percobaan dengan backoff 15/30/60/120 menit.
+- Verifikasi lulus: `npm run test:notification-policy`, `npm run typecheck`, `npm run lint`, dan `npx deno check supabase/functions/mobile-data/index.ts supabase/functions/send-push/index.ts`.
+- Supabase: `npx supabase db lint --linked --level error` tidak menemukan error schema; `npx supabase db push --dry-run` mengenali migrasi baru. Deploy/migrasi nyata belum dijalankan.
+
+## 2026-10-03 — Aktivasi produksi notifikasi
+
+- [x] Verifikasi target Supabase produksi. Kanal EAS belum dapat diverifikasi karena sesi Expo tidak tersedia.
+- [x] Terapkan migrasi `20261003000000_add_quiet_hours_and_notification_retry.sql` ke Supabase produksi.
+- [x] Deploy Edge Function `mobile-data` dan `send-push`.
+- [x] Publikasikan update JavaScript mobile ke kanal EAS `production`.
+- [x] Verifikasi status migrasi dan Functions produksi.
+
+### Review
+
+- Backend produksi aktif: migrasi `20261003000000` sudah tercatat; `mobile-data` v8 dan `send-push` v14 berstatus `ACTIVE`.
+- `npx supabase db lint --linked --level error` lulus dan kolom retry terverifikasi ada di database produksi.
+- Update Android dipublikasikan ke kanal `production` pada runtime `1.0.1`: grup `1abeb8b3-6a1e-452c-92ca-936349053291`, update Android `01a101c0-d84e-75b7-81a5-2882421e544c`.
+- `npx eas channel:view production` mengonfirmasi kanal production menunjuk ke grup update baru.
+
+## 2026-10-03 — Penyederhanaan kartu Dashboard
+
+- [x] Audit kartu Dashboard dan identifikasi copy yang berulang atau terlalu panjang.
+- [x] Ringkas copy menjadi judul, status utama, dan konteks singkat tanpa menghilangkan informasi penting.
+- [x] Verifikasi tampilan Dashboard serta jalankan typecheck dan lint.
+
+### Review
+
+- Dashboard tidak lagi menampilkan eyebrow/subtitle hero yang berulang; hero kini fokus pada salam pengguna dan status aktif.
+- Kartu tugas Dashboard menyembunyikan preview deskripsi, tetapi preview tetap tersedia pada halaman Tugas dan Kalender melalui prop `showPreview` default `true`.
+- Copy state kosong/loading dipadatkan tanpa menghapus status penting.
+- Verifikasi lulus: `npm run typecheck`, `npm run lint`, `git -C mobile diff --check`, dan `npx expo export --platform android`.
+- Browser lokal tidak dapat diinisialisasi oleh lingkungan alat, sehingga pemeriksaan visual dilakukan melalui review diff dan bundling Android.
+
+## 2026-10-03 — Rilis penyederhanaan Dashboard
+
+- [x] Verifikasi sesi Expo, channel production, dan perubahan yang siap dirilis.
+- [x] Publikasikan EAS Update Android ke channel `production`.
+- [x] Verifikasi channel menunjuk ke grup update baru.
+
+### Review
+
+- `npm run typecheck`, `npm run lint`, dan `git diff --check` lulus sebelum rilis.
+- Update Android dipublikasikan pada runtime `1.0.1`: grup `ba722005-5b9c-4797-b8a6-0abc6f5187ed`, update `01a101cc-a14b-7d18-87c6-81398772d5c2`.
+- `npx eas channel:view production` mengonfirmasi channel production menunjuk ke grup baru dengan pesan `Sederhanakan kartu Dashboard`.
+
+## 2026-10-03 — Sapaan Dashboard memakai nama
+
+- [ ] Audit aliran data profil dari login hingga Dashboard untuk membedakan NIM dan nama.
+- [ ] Perbaiki sapaan agar memakai nama profil dengan fallback yang aman.
+- [ ] Verifikasi typecheck, lint, dan kasus fallback tanpa nama.
+
+### Review
+
+- Menunggu audit data profil dan implementasi.

@@ -10,7 +10,9 @@ Fungsi serverless yang disiapkan:
 2. send-push
 - Ambil antrean dari `tabel_antrian_notifikasi`
 - Kirim push ke device user (Expo push token atau FCM legacy)
-- Catat status kirim dan error
+- Hormati jam diam user (WIB) dengan menunda antrean sampai rentang selesai
+- Retry kegagalan sementara hingga lima kali dengan backoff 15/30/60/120 menit
+- Nonaktifkan token perangkat yang ditolak provider sebagai tidak valid
 
 3. daily-reminder
 - Jalankan reminder harian berdasarkan snapshot yang sudah ada

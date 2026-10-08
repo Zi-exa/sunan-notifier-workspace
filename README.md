@@ -19,6 +19,8 @@ Project ini bukan aplikasi resmi UMK. Repo ini adalah workspace publik yang meng
 - Monitoring absensi dari event SUNAN.
 - Kalender akademik dari event Moodle.
 - Notifikasi lokal dan push untuk tugas baru, tugas dibuka, deadline, dan absensi.
+- Jam diam opsional berbasis WIB; notifikasi pada rentang tersebut ditunda sampai jam selesai.
+- Retry push otomatis hingga lima kali untuk kegagalan sementara, serta penonaktifan token perangkat yang tidak valid.
 - Pengaturan notifikasi, tema, mata kuliah yang dipantau, serta pengecekan update aplikasi.
 - EAS Update untuk patch JavaScript/assets dan rilis APK manual lewat GitHub Release.
 
@@ -134,6 +136,7 @@ Catatan penting: Expo Go dapat dipakai untuk melihat UI, tetapi push notificatio
 ```powershell
 cd mobile
 npm run typecheck
+npm run test:notification-policy
 npm run lint
 ```
 
@@ -194,6 +197,7 @@ Notifikasi dianggap siap jika semua ini terpenuhi:
 - User membuka aplikasi minimal satu kali setelah install/update agar token perangkat terdaftar.
 - Di database, perangkat aktif memakai token FCM native, bukan hanya token Expo lama.
 - Pengaturan notifikasi user aktif.
+- Jika jam diam aktif, waktu mulai dan selesai berbeda; pengiriman akan ditunda sampai jam selesai (WIB).
 
 Query cek cron:
 
@@ -204,7 +208,7 @@ npx supabase db query --linked "select jobname, schedule, active from cron.job o
 Query cek antrean terbaru:
 
 ```powershell
-npx supabase db query --linked "select jenis_notifikasi, jadwal_kirim, dikirim_pada, alasan_gagal from public.tabel_antrian_notifikasi order by dibuat_pada desc limit 20;"
+npx supabase db query --linked "select jenis_notifikasi, jadwal_kirim, coba_lagi_pada, jumlah_percobaan, dikirim_pada, gagal_permanen_pada, alasan_gagal from public.tabel_antrian_notifikasi order by dibuat_pada desc limit 20;"
 ```
 
 ## Build Android

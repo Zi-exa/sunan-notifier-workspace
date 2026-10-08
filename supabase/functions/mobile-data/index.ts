@@ -17,6 +17,11 @@ type UserSettingsInput = {
   notifyAttendance: boolean;
   pollIntervalMinutes: 15 | 30 | 60;
   monitoredCourseIds: number[];
+  quietHours?: {
+    enabled?: boolean;
+    start?: string;
+    end?: string;
+  };
 };
 
 type RequestPayload = {
@@ -43,6 +48,12 @@ type AppUserRow = {
 };
 
 type UserSettingsRow = Record<string, unknown>;
+
+const DEFAULT_QUIET_HOURS = {
+  enabled: false,
+  start: '22:00',
+  end: '07:00',
+} as const;
 
 if (!supabaseUrl || !serviceRoleKey) {
   throw new Error('SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY wajib diisi.');
@@ -126,6 +137,46 @@ function normalizeMonitoredCourseIds(values: unknown): number[] {
   return values.map((value) => Number(value)).filter((value) => Number.isFinite(value));
 }
 
+function normalizeQuietHourTime(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const match = /^(\d{2}):(\d{2})(?::\d{2})?$/.exec(value.trim());
+  if (!match) {
+    return null;
+  }
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) {
+    return null;
+  }
+
+  return `${match[1]}:${match[2]}`;
+}
+
+function normalizeQuietHours(input: unknown, requireComplete = false) {
+  if (!input || typeof input !== 'object') {
+    return DEFAULT_QUIET_HOURS;
+  }
+
+  const value = input as Record<string, unknown>;
+  const start = normalizeQuietHourTime(value.start);
+  const end = normalizeQuietHourTime(value.end);
+  const enabled = value.enabled === true;
+
+  if (requireComplete && (!start || !end || (enabled && start === end))) {
+    return null;
+  }
+
+  return {
+    enabled,
+    start: start ?? DEFAULT_QUIET_HOURS.start,
+    end: end ?? DEFAULT_QUIET_HOURS.end,
+  };
+}
+
 function toRemoteUserSettings(data: Record<string, unknown>) {
   return {
     notifyNewTask: Boolean(data.notifikasi_tugas_baru),
@@ -135,6 +186,12 @@ function toRemoteUserSettings(data: Record<string, unknown>) {
     notifyAttendance: Boolean(data.notifikasi_absensi),
     pollIntervalMinutes: Number(data.interval_sinkronisasi_menit) as 15 | 30 | 60,
     monitoredCourseIds: normalizeMonitoredCourseIds(data.id_mata_kuliah_dipantau),
+    quietHours: {
+      enabled: data.jam_diam_aktif === true,
+      start:
+        normalizeQuietHourTime(data.jangan_ganggu_mulai) ?? DEFAULT_QUIET_HOURS.start,
+      end: normalizeQuietHourTime(data.jangan_ganggu_selesai) ?? DEFAULT_QUIET_HOURS.end,
+    },
   };
 }
 
@@ -246,9 +303,9 @@ Deno.serve(async (request) => {
 
     if (action === 'load-settings') {
       const { data, error } = await supabase
-        .from('tabel_pengaturan_mahasiswa')
-        .select(
-          'notifikasi_tugas_baru,notifikasi_deadline_h1,notifikasi_deadline_hari_ini,notifikasi_tugas_dibuka,notifikasi_absensi,interval_sinkronisasi_menit,id_mata_kuliah_dipantau'
+          .from('tabel_pengaturan_mahasiswa')
+          .select(
+           'notifikasi_tugas_baru,notifikasi_deadline_h1,notifikasi_deadline_hari_ini,notifikasi_tugas_dibuka,notifikasi_absensi,interval_sinkronisasi_menit,id_mata_kuliah_dipantau,jam_diam_aktif,jangan_ganggu_mulai,jangan_ganggu_selesai'
         )
         .eq('id_mahasiswa', appUser.id)
         .maybeSingle();
@@ -272,6 +329,13 @@ Deno.serve(async (request) => {
         });
       }
 
+      const quietHours = normalizeQuietHours(settings.quietHours, true);
+      if (!quietHours) {
+        return jsonResponse(400, {
+          error: 'Jam diam harus memakai format HH:mm dengan waktu mulai dan selesai yang berbeda.',
+        });
+      }
+
       const basePayload = {
         id_mahasiswa: appUser.id,
         notifikasi_tugas_baru: settings.notifyNewTask,
@@ -280,6 +344,9 @@ Deno.serve(async (request) => {
         notifikasi_absensi: settings.notifyAttendance,
         interval_sinkronisasi_menit: settings.pollIntervalMinutes,
         id_mata_kuliah_dipantau: settings.monitoredCourseIds,
+        jam_diam_aktif: quietHours.enabled,
+        jangan_ganggu_mulai: quietHours.start,
+        jangan_ganggu_selesai: quietHours.end,
         diperbarui_pada: new Date().toISOString(),
       };
 

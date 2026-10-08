@@ -1,4 +1,10 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import {
+  formatFailureReason,
+  getDeliveryFailureState,
+  getQuietHoursEndDate,
+  type QuietHoursSettings,
+} from '../_shared/notification-policy.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -172,52 +178,78 @@ type QueueRow = {
   judul_notifikasi: string;
   isi_notifikasi: string;
   isi_data: Record<string, unknown>;
+  jumlah_percobaan?: number;
 };
 
 type DeviceRow = {
   token_perangkat: string;
 };
 
+type UserQuietHoursRow = QuietHoursSettings & {
+  id_mahasiswa: string;
+};
+
+type DeliveryResult =
+  | { ok: true }
+  | { ok: false; reason: string; invalidToken?: boolean };
+
+function isAuthorized(authHeader: string): boolean {
+  return acceptedAuthTokens.some((token) => authHeader === `Bearer ${token}`);
+}
+
+function isInvalidDeviceTokenReason(reason: string): boolean {
+  return /DeviceNotRegistered|NotRegistered|InvalidRegistration|UNREGISTERED|registration token.*not registered|invalid registration token/i.test(
+    reason
+  );
+}
+
 async function sendViaExpo(
   pushToken: string,
   title: string,
   body: string,
   data: Record<string, unknown>
-): Promise<{ ok: boolean; reason?: string }> {
-  const response = await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      to: pushToken,
-      title,
-      body,
-      data,
-      sound: 'default',
-      channelId: 'default',
-    }),
-  });
+): Promise<DeliveryResult> {
+  try {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: pushToken,
+        title,
+        body,
+        data,
+        sound: 'default',
+        channelId: 'default',
+      }),
+    });
 
-  const payload = (await response.json()) as {
-    data?: {
-      status?: string;
-      message?: string;
+    const payload = (await response.json()) as {
+      data?: {
+        status?: string;
+        message?: string;
+      };
+      errors?: Array<{ message?: string }>;
     };
-    errors?: Array<{ message?: string }>;
-  };
 
-  if (!response.ok) {
-    return { ok: false, reason: `Expo HTTP ${response.status}` };
+    if (!response.ok) {
+      return { ok: false, reason: `Expo HTTP ${response.status}` };
+    }
+
+    if (payload.data?.status === 'ok') {
+      return { ok: true };
+    }
+
+    const reason = payload.data?.message ?? payload.errors?.[0]?.message ?? 'Expo push gagal';
+    return { ok: false, reason, invalidToken: isInvalidDeviceTokenReason(reason) };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: error instanceof Error ? `Expo request gagal: ${error.message}` : 'Expo request gagal',
+    };
   }
-
-  if (payload.data?.status === 'ok') {
-    return { ok: true };
-  }
-
-  const errorMessage = payload.data?.message ?? payload.errors?.[0]?.message ?? 'Expo push gagal';
-  return { ok: false, reason: errorMessage };
 }
 
 async function sendViaFcmLegacy(
@@ -226,46 +258,51 @@ async function sendViaFcmLegacy(
   body: string,
   data: Record<string, unknown>,
   notificationTag: string
-): Promise<{ ok: boolean; reason?: string }> {
+): Promise<DeliveryResult> {
   if (!fcmServerKey) {
     return { ok: false, reason: 'FCM_SERVER_KEY belum diset' };
   }
 
-  const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-    method: 'POST',
-    headers: {
-      Authorization: `key=${fcmServerKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      to: pushToken,
-      notification: {
-        title,
-        body,
-        tag: notificationTag,
+  try {
+    const response = await fetch('https://fcm.googleapis.com/fcm/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `key=${fcmServerKey}`,
+        'Content-Type': 'application/json',
       },
-      data,
-      priority: 'high',
-    }),
-  });
+      body: JSON.stringify({
+        to: pushToken,
+        notification: {
+          title,
+          body,
+          tag: notificationTag,
+        },
+        data,
+        priority: 'high',
+      }),
+    });
 
-  if (!response.ok) {
-    return { ok: false, reason: `FCM HTTP ${response.status}` };
+    if (!response.ok) {
+      return { ok: false, reason: `FCM HTTP ${response.status}` };
+    }
+
+    const payload = (await response.json()) as {
+      success?: number;
+      results?: Array<{ error?: string }>;
+    };
+
+    if ((payload.success ?? 0) > 0) {
+      return { ok: true };
+    }
+
+    const reason = payload.results?.[0]?.error ?? 'FCM delivery gagal';
+    return { ok: false, reason, invalidToken: isInvalidDeviceTokenReason(reason) };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: error instanceof Error ? `FCM request gagal: ${error.message}` : 'FCM request gagal',
+    };
   }
-
-  const payload = (await response.json()) as {
-    success?: number;
-    results?: Array<{ error?: string }>;
-  };
-
-  if ((payload.success ?? 0) > 0) {
-    return { ok: true };
-  }
-
-  return {
-    ok: false,
-    reason: payload.results?.[0]?.error ?? 'FCM delivery gagal',
-  };
 }
 
 async function sendViaFcmV1(
@@ -274,7 +311,7 @@ async function sendViaFcmV1(
   body: string,
   data: Record<string, unknown>,
   notificationTag: string
-): Promise<{ ok: boolean; reason?: string }> {
+): Promise<DeliveryResult> {
   if (!fcmServiceAccount) {
     return { ok: false, reason: 'FCM_SERVICE_ACCOUNT_JSON belum diset atau tidak valid' };
   }
@@ -298,49 +335,54 @@ async function sendViaFcmV1(
     dataPayload[key] = typeof value === 'string' ? value : JSON.stringify(value);
   });
 
-  const response = await fetch(
-    `https://fcm.googleapis.com/v1/projects/${fcmServiceAccount.project_id}/messages:send`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: {
-          token: pushToken,
-          notification: {
-            title,
-            body,
-          },
-          data: dataPayload,
-          android: {
-            priority: 'HIGH',
+  try {
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${fcmServiceAccount.project_id}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: {
+            token: pushToken,
             notification: {
-              tag: notificationTag,
+              title,
+              body,
+            },
+            data: dataPayload,
+            android: {
+              priority: 'HIGH',
+              notification: {
+                tag: notificationTag,
+              },
             },
           },
-        },
-      }),
+        }),
+      }
+    );
+
+    if (response.ok) {
+      return { ok: true };
     }
-  );
 
-  if (response.ok) {
-    return { ok: true };
-  }
-
-  const payload = (await response.json()) as {
-    error?: {
-      message?: string;
-      status?: string;
+    const payload = (await response.json()) as {
+      error?: {
+        message?: string;
+        status?: string;
+      };
     };
-  };
+    const reason =
+      payload.error?.message ?? payload.error?.status ?? `FCM v1 HTTP ${response.status}`;
 
-  return {
-    ok: false,
-    reason:
-      payload.error?.message ?? payload.error?.status ?? `FCM v1 HTTP ${response.status}`,
-  };
+    return { ok: false, reason, invalidToken: isInvalidDeviceTokenReason(reason) };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: error instanceof Error ? `FCM request gagal: ${error.message}` : 'FCM request gagal',
+    };
+  }
 }
 
 async function deliverPush(
@@ -349,7 +391,7 @@ async function deliverPush(
   body: string,
   data: Record<string, unknown>,
   notificationTag: string
-): Promise<{ ok: boolean; reason?: string }> {
+): Promise<DeliveryResult> {
   if (pushToken.startsWith('ExponentPushToken') || pushToken.startsWith('ExpoPushToken')) {
     return sendViaExpo(pushToken, title, body, data);
   }
@@ -368,13 +410,66 @@ async function deliverPush(
   };
 }
 
+async function deferQueueForQuietHours(row: QueueRow, until: Date): Promise<void> {
+  const { error } = await supabase
+    .from('tabel_antrian_notifikasi')
+    .update({
+      diproses_pada: null,
+      coba_lagi_pada: until.toISOString(),
+      alasan_gagal: null,
+    })
+    .eq('id', row.id);
+
+  if (error) {
+    throw new Error(`Gagal menunda antrean saat jam diam: ${error.message}`);
+  }
+}
+
+async function markQueueDeliveryFailure(
+  row: QueueRow,
+  reason: string
+): Promise<'retrying' | 'terminal'> {
+  const now = new Date();
+  const failureState = getDeliveryFailureState(row.jumlah_percobaan, now);
+  const { error } = await supabase
+    .from('tabel_antrian_notifikasi')
+    .update({
+      diproses_pada: null,
+      jumlah_percobaan: failureState.attempts,
+      coba_lagi_pada: failureState.retryAt?.toISOString() ?? null,
+      gagal_permanen_pada: failureState.terminal ? now.toISOString() : null,
+      alasan_gagal: formatFailureReason(reason),
+    })
+    .eq('id', row.id);
+
+  if (error) {
+    throw new Error(`Gagal memperbarui retry antrean: ${error.message}`);
+  }
+
+  return failureState.terminal ? 'terminal' : 'retrying';
+}
+
+async function deactivateInvalidDeviceToken(pushToken: string): Promise<void> {
+  const { error } = await supabase
+    .from('tabel_perangkat_mahasiswa')
+    .update({
+      aktif: false,
+      diperbarui_pada: new Date().toISOString(),
+    })
+    .eq('token_perangkat', pushToken);
+
+  if (error) {
+    throw new Error(`Gagal menonaktifkan token perangkat tidak valid: ${error.message}`);
+  }
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   const authHeader = request.headers.get('Authorization') ?? '';
-  if (!authHeader || !acceptedAuthTokens.some((token) => authHeader.includes(token))) {
+  if (!isAuthorized(authHeader)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: {
@@ -396,66 +491,125 @@ Deno.serve(async (request) => {
     const rows = (queueResult.data ?? []) as QueueRow[];
     let sentCount = 0;
     let failedCount = 0;
+    let retryingCount = 0;
+    let terminalCount = 0;
+    let deferredCount = 0;
+
+    const userIds = [...new Set(rows.map((row) => row.id_mahasiswa))];
+    const quietHoursResult = userIds.length
+      ? await supabase
+          .from('tabel_pengaturan_mahasiswa')
+          .select('id_mahasiswa,jam_diam_aktif,jangan_ganggu_mulai,jangan_ganggu_selesai')
+          .in('id_mahasiswa', userIds)
+      : { data: [], error: null };
+
+    if (quietHoursResult.error) {
+      throw new Error(`Gagal membaca pengaturan jam diam: ${quietHoursResult.error.message}`);
+    }
+
+    const quietHoursByUser = new Map<string, UserQuietHoursRow>();
+    for (const settings of (quietHoursResult.data ?? []) as UserQuietHoursRow[]) {
+      quietHoursByUser.set(settings.id_mahasiswa, settings);
+    }
 
     for (const row of rows) {
-      const deviceResult = await supabase
-        .from('tabel_perangkat_mahasiswa')
-        .select('token_perangkat')
-        .eq('id_mahasiswa', row.id_mahasiswa)
-        .eq('aktif', true);
-
-      const devices = (deviceResult.data ?? []) as DeviceRow[];
-
-      if (!devices.length) {
-        await supabase
-          .from('tabel_antrian_notifikasi')
-          .update({
-            diproses_pada: null,
-            alasan_gagal: 'Tidak ada device aktif untuk user ini.',
-          })
-          .eq('id', row.id);
-        failedCount += 1;
-        continue;
-      }
-
-      let success = 0;
-      const failures: string[] = [];
-
-      for (const device of devices) {
-        const delivery = await deliverPush(
-          device.token_perangkat,
-          row.judul_notifikasi,
-          row.isi_notifikasi,
-          row.isi_data,
-          `sunan-notification-${row.id}`
-        );
-
-        if (delivery.ok) {
-          success += 1;
-        } else {
-          failures.push(delivery.reason ?? 'Unknown delivery error');
+      try {
+        const quietHoursEnd = getQuietHoursEndDate(quietHoursByUser.get(row.id_mahasiswa));
+        if (quietHoursEnd) {
+          await deferQueueForQuietHours(row, quietHoursEnd);
+          deferredCount += 1;
+          continue;
         }
-      }
 
-      if (success > 0) {
-        await supabase
-          .from('tabel_antrian_notifikasi')
-          .update({
-            diproses_pada: null,
-            dikirim_pada: new Date().toISOString(),
-            alasan_gagal: failures.length ? failures.join('; ').slice(0, 800) : null,
-          })
-          .eq('id', row.id);
-        sentCount += 1;
-      } else {
-        await supabase
-          .from('tabel_antrian_notifikasi')
-          .update({
-            diproses_pada: null,
-            alasan_gagal: failures.join('; ').slice(0, 800),
-          })
-          .eq('id', row.id);
+        const deviceResult = await supabase
+          .from('tabel_perangkat_mahasiswa')
+          .select('token_perangkat')
+          .eq('id_mahasiswa', row.id_mahasiswa)
+          .eq('aktif', true);
+
+        if (deviceResult.error) {
+          throw new Error(`Gagal membaca perangkat aktif: ${deviceResult.error.message}`);
+        }
+
+        const devices = (deviceResult.data ?? []) as DeviceRow[];
+
+        if (!devices.length) {
+          const state = await markQueueDeliveryFailure(
+            row,
+            'Tidak ada perangkat aktif untuk mahasiswa ini.'
+          );
+          failedCount += 1;
+          if (state === 'terminal') {
+            terminalCount += 1;
+          } else {
+            retryingCount += 1;
+          }
+          continue;
+        }
+
+        let success = 0;
+        const failures: string[] = [];
+
+        for (const device of devices) {
+          const delivery = await deliverPush(
+            device.token_perangkat,
+            row.judul_notifikasi,
+            row.isi_notifikasi,
+            row.isi_data,
+            `sunan-notification-${row.id}`
+          );
+
+          if (delivery.ok) {
+            success += 1;
+          } else {
+            failures.push(delivery.reason);
+            if (delivery.invalidToken) {
+              await deactivateInvalidDeviceToken(device.token_perangkat);
+            }
+          }
+        }
+
+        if (success > 0) {
+          const { error } = await supabase
+            .from('tabel_antrian_notifikasi')
+            .update({
+              diproses_pada: null,
+              dikirim_pada: new Date().toISOString(),
+              coba_lagi_pada: null,
+              gagal_permanen_pada: null,
+              alasan_gagal: failures.length ? formatFailureReason(failures.join('; ')) : null,
+            })
+            .eq('id', row.id);
+
+          if (error) {
+            throw new Error(`Gagal menandai antrean terkirim: ${error.message}`);
+          }
+
+          sentCount += 1;
+          continue;
+        }
+
+        const state = await markQueueDeliveryFailure(
+          row,
+          failures.join('; ') || 'Tidak ada perangkat yang berhasil menerima push.'
+        );
         failedCount += 1;
+        if (state === 'terminal') {
+          terminalCount += 1;
+        } else {
+          retryingCount += 1;
+        }
+      } catch (error) {
+        const state = await markQueueDeliveryFailure(
+          row,
+          error instanceof Error ? error.message : 'Pemrosesan antrean push gagal.'
+        );
+        failedCount += 1;
+        if (state === 'terminal') {
+          terminalCount += 1;
+        } else {
+          retryingCount += 1;
+        }
       }
     }
 
@@ -465,6 +619,9 @@ Deno.serve(async (request) => {
         queued: rows.length,
         sent: sentCount,
         failed: failedCount,
+        retrying: retryingCount,
+        terminal: terminalCount,
+        deferred_quiet_hours: deferredCount,
       }),
       {
         status: 200,
