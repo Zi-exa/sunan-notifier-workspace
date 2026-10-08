@@ -15,6 +15,7 @@ type UserSettingsInput = {
   notifyDeadlineToday: boolean;
   notifyTaskOpen: boolean;
   notifyAttendance: boolean;
+  notifyMateriBaru?: boolean;
   pollIntervalMinutes: 15 | 30 | 60;
   monitoredCourseIds: number[];
   quietHours?: {
@@ -184,6 +185,7 @@ function toRemoteUserSettings(data: Record<string, unknown>) {
     notifyDeadlineToday: Boolean(data.notifikasi_deadline_hari_ini),
     notifyTaskOpen: Boolean(data.notifikasi_tugas_dibuka),
     notifyAttendance: Boolean(data.notifikasi_absensi),
+    notifyMateriBaru: data.notifikasi_materi_baru !== false,
     pollIntervalMinutes: Number(data.interval_sinkronisasi_menit) as 15 | 30 | 60,
     monitoredCourseIds: normalizeMonitoredCourseIds(data.id_mata_kuliah_dipantau),
     quietHours: {
@@ -305,7 +307,7 @@ Deno.serve(async (request) => {
       const { data, error } = await supabase
           .from('tabel_pengaturan_mahasiswa')
           .select(
-           'notifikasi_tugas_baru,notifikasi_deadline_h1,notifikasi_deadline_hari_ini,notifikasi_tugas_dibuka,notifikasi_absensi,interval_sinkronisasi_menit,id_mata_kuliah_dipantau,jam_diam_aktif,jangan_ganggu_mulai,jangan_ganggu_selesai'
+           'notifikasi_tugas_baru,notifikasi_deadline_h1,notifikasi_deadline_hari_ini,notifikasi_tugas_dibuka,notifikasi_absensi,notifikasi_materi_baru,interval_sinkronisasi_menit,id_mata_kuliah_dipantau,jam_diam_aktif,jangan_ganggu_mulai,jangan_ganggu_selesai'
         )
         .eq('id_mahasiswa', appUser.id)
         .maybeSingle();
@@ -342,6 +344,7 @@ Deno.serve(async (request) => {
         notifikasi_deadline_h1: settings.notifyDeadlineH1,
         notifikasi_deadline_hari_ini: settings.notifyDeadlineToday,
         notifikasi_absensi: settings.notifyAttendance,
+        notifikasi_materi_baru: settings.notifyMateriBaru !== false,
         interval_sinkronisasi_menit: settings.pollIntervalMinutes,
         id_mata_kuliah_dipantau: settings.monitoredCourseIds,
         jam_diam_aktif: quietHours.enabled,
