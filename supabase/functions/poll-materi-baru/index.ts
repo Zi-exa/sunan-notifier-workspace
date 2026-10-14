@@ -59,7 +59,7 @@ type MateriSnapshot = {
   namaModul: string;
   jenisModul: string;
   tautanModul?: string;
-  berkas: Array<{ nama: string; tipe?: string; ukuran?: number; diubahPada?: number }>;
+  berkas: Array<{ nama: string; tipe?: string; ukuran?: number; diubahPada?: number; tautan?: string }>;
 };
 
 // Hanya tipe modul yang dianggap "materi" dan layak di-notify.
@@ -158,6 +158,7 @@ function toMateriSnapshot(course: MoodleCourse, module: MoodleModule): MateriSna
       tipe: c.mimetype,
       ukuran: c.filesize,
       diubahPada: c.timemodified,
+      tautan: c.fileurl,
     })),
   };
 }

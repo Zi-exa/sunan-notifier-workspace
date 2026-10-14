@@ -506,6 +506,7 @@ Deno.serve(async (request) => {
               mimetype: typeof f.tipe === 'string' ? f.tipe : null,
               size: typeof f.ukuran === 'number' ? f.ukuran : null,
               changedAt: typeof f.diubahPada === 'number' ? f.diubahPada : null,
+              url: typeof f.tautan === 'string' ? f.tautan : null,
             })),
           };
         }),
