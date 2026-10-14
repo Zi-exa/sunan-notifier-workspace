@@ -279,20 +279,26 @@ Deno.serve(async (request) => {
             if (!JENIS_MODUL_MATERI.has(module.modname)) continue;
             const snapshot = toMateriSnapshot(course, module);
             const hashBaru = await hashPayload(snapshot);
-
-            barisSnapshot.push({
-              id_mahasiswa: mhs.id,
-              id_modul: snapshot.id,
-              id_mata_kuliah: snapshot.idMataKuliah,
-              nama_mata_kuliah: snapshot.namaMataKuliah,
-              nama_modul: snapshot.namaModul,
-              jenis_modul: snapshot.jenisModul,
-              tautan_modul: snapshot.tautanModul ?? null,
-              hash_data: hashBaru,
-              isi_data: snapshot,
-            });
-
             const hashLama = hashLamaMap.get(snapshot.id);
+            const isBaru = !hashLama;
+            const isBerubah = !!hashLama && hashLama !== hashBaru;
+
+            // Hanya simpan snapshot yang baru/berubah supaya diperbarui_pada
+            // mencerminkan perubahan nyata, bukan jadwal cron.
+            if (isBaru || isBerubah) {
+              barisSnapshot.push({
+                id_mahasiswa: mhs.id,
+                id_modul: snapshot.id,
+                id_mata_kuliah: snapshot.idMataKuliah,
+                nama_mata_kuliah: snapshot.namaMataKuliah,
+                nama_modul: snapshot.namaModul,
+                jenis_modul: snapshot.jenisModul,
+                tautan_modul: snapshot.tautanModul ?? null,
+                hash_data: hashBaru,
+                isi_data: snapshot,
+              });
+            }
+
             if (!hashLama && !isBaselineCourse) {
               barisAntrean.push({
                 id_mahasiswa: mhs.id,
