@@ -26,7 +26,7 @@ type UserSettingsInput = {
 };
 
 type RequestPayload = {
-  action?: 'sync-profile' | 'load-settings' | 'save-settings' | 'upsert-device' | 'deactivate-device';
+  action?: 'sync-profile' | 'load-settings' | 'save-settings' | 'upsert-device' | 'deactivate-device' | 'list-materi';
   moodleToken?: string;
   moodleUserId?: number;
   nim?: string;
@@ -473,6 +473,41 @@ Deno.serve(async (request) => {
       return jsonResponse(200, {
         appUserId: appUser.id,
         ok: true,
+      });
+    }
+
+    if (action === 'list-materi') {
+      const { data, error } = await supabase
+        .from('tabel_snapshot_materi')
+        .select('id_modul,id_mata_kuliah,nama_mata_kuliah,nama_modul,jenis_modul,tautan_modul,isi_data,diperbarui_pada')
+        .eq('id_mahasiswa', appUser.id)
+        .order('diperbarui_pada', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return jsonResponse(200, {
+        appUserId: appUser.id,
+        items: (data ?? []).map((row) => {
+          const isi = (row as Record<string, unknown>).isi_data as Record<string, unknown> | null;
+          const berkas = Array.isArray(isi?.berkas) ? isi?.berkas : [];
+          return {
+            moduleId: (row as Record<string, unknown>).id_modul,
+            courseId: (row as Record<string, unknown>).id_mata_kuliah,
+            courseName: (row as Record<string, unknown>).nama_mata_kuliah,
+            moduleName: (row as Record<string, unknown>).nama_modul,
+            modname: (row as Record<string, unknown>).jenis_modul,
+            quickLink: (row as Record<string, unknown>).tautan_modul ?? null,
+            updatedAt: (row as Record<string, unknown>).diperbarui_pada,
+            files: (berkas as Array<Record<string, unknown>>).map((f) => ({
+              name: typeof f.nama === 'string' ? f.nama : '',
+              mimetype: typeof f.tipe === 'string' ? f.tipe : null,
+              size: typeof f.ukuran === 'number' ? f.ukuran : null,
+            })),
+          };
+        }),
       });
     }
 
