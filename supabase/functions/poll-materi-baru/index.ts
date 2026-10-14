@@ -163,6 +163,7 @@ function toMateriSnapshot(course: MoodleCourse, sectionName: string, module: Moo
       ukuran: c.filesize,
       diubahPada: c.timemodified,
       tautan: c.fileurl,
+      pengunggah: (c as unknown as Record<string, unknown>).author as string | undefined,
     })),
   };
 }

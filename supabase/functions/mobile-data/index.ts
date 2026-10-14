@@ -509,6 +509,7 @@ Deno.serve(async (request) => {
               size: typeof f.ukuran === 'number' ? f.ukuran : null,
               changedAt: typeof f.diubahPada === 'number' ? f.diubahPada : null,
               url: typeof f.tautan === 'string' ? f.tautan : null,
+              uploader: typeof f.pengunggah === 'string' ? f.pengunggah : null,
             })),
           };
         }),
