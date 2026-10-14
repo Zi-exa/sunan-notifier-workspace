@@ -2,7 +2,7 @@
 var RELEASE_OWNER = "Zi-exa";
 var RELEASE_REPO = "sunan-notifier-releases";
 var ASSET_NAME = "app-release.apk";
-var FALLBACK_TAG = "v1.1.0";
+var FALLBACK_TAG = "v1.1.1";
 var FALLBACK_URL =
   "https://github.com/" + RELEASE_OWNER + "/" + RELEASE_REPO +
   "/releases/download/" + FALLBACK_TAG + "/" + ASSET_NAME;
