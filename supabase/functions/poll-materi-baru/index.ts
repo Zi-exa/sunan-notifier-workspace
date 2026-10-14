@@ -58,6 +58,8 @@ type MateriSnapshot = {
   namaMataKuliah: string;
   namaModul: string;
   jenisModul: string;
+  bagian?: string;
+  deskripsi?: string;
   tautanModul?: string;
   berkas: Array<{ nama: string; tipe?: string; ukuran?: number; diubahPada?: number; tautan?: string }>;
 };
@@ -145,13 +147,15 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-function toMateriSnapshot(course: MoodleCourse, module: MoodleModule): MateriSnapshot {
+function toMateriSnapshot(course: MoodleCourse, sectionName: string, module: MoodleModule): MateriSnapshot {
   return {
     id: module.id,
     idMataKuliah: course.id,
     namaMataKuliah: stripHtml(course.fullname) || `Matkul #${course.id}`,
     namaModul: stripHtml(module.name) || `Materi #${module.id}`,
     jenisModul: module.modname,
+    bagian: stripHtml(sectionName) || undefined,
+    deskripsi: stripHtml(module.description).slice(0, 2000) || undefined,
     tautanModul: module.url,
     berkas: (module.contents ?? []).map((c) => ({
       nama: c.filename ?? 'berkas',
@@ -278,7 +282,7 @@ Deno.serve(async (request) => {
         for (const section of sections) {
           for (const module of section.modules ?? []) {
             if (!JENIS_MODUL_MATERI.has(module.modname)) continue;
-            const snapshot = toMateriSnapshot(course, module);
+            const snapshot = toMateriSnapshot(course, section.name ?? '', module);
             const hashBaru = await hashPayload(snapshot);
             const hashLama = hashLamaMap.get(snapshot.id);
             const isBaru = !hashLama;

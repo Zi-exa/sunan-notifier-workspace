@@ -499,6 +499,8 @@ Deno.serve(async (request) => {
             courseName: (row as Record<string, unknown>).nama_mata_kuliah,
             moduleName: (row as Record<string, unknown>).nama_modul,
             modname: (row as Record<string, unknown>).jenis_modul,
+            sectionName: typeof isi?.bagian === 'string' ? (isi.bagian as string) : null,
+            description: typeof isi?.deskripsi === 'string' ? (isi.deskripsi as string) : null,
             quickLink: (row as Record<string, unknown>).tautan_modul ?? null,
             updatedAt: (row as Record<string, unknown>).diperbarui_pada,
             files: (berkas as Array<Record<string, unknown>>).map((f) => ({
